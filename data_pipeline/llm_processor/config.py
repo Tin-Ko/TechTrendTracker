@@ -1,0 +1,1 @@
+LLM_API_KEY = "sk-f5a77227c0da4953a8e4a58667c7d8a4"
