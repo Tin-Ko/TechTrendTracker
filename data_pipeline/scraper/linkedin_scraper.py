@@ -2,6 +2,7 @@ import scrapy
 from scrapy.crawler import CrawlerProcess
 from scrapy.utils.project import get_project_settings
 from twisted.internet.defer import waitForDeferred
+from storage.hdfs.hdfs import HDFSClient
 
 class LinkedInJobContentSpider(scrapy.Spider):
     name = "linkedin_job_content_spider"
