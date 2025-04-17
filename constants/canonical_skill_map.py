@@ -1,0 +1,110 @@
+canonical_skill_map = {
+    # Frontend Frameworks
+    "react.js": "React",
+    "reactjs": "React",
+    "vue.js": "Vue",
+    "vuejs": "Vue",
+    "angularjs": "Angular",
+    "angular.js": "Angular",
+    "sveltejs": "Svelte",
+    "next.js": "Next.js",
+    "nuxt.js": "Nuxt.js",
+
+    # Backend Frameworks
+    "express.js": "Express",
+    "expressjs": "Express",
+    "nestjs": "NestJS",
+    "flask": "Flask",
+    "django": "Django",
+    "rails": "Ruby on Rails",
+    "ror": "Ruby on Rails",
+    "springboot": "Spring Boot",
+    "spring boot": "Spring Boot",
+
+    # Languages
+    "js": "JavaScript",
+    "javascript": "JavaScript",
+    "ts": "TypeScript",
+    "typescript": "TypeScript",
+    "py": "Python",
+    "csharp": "C#",
+    "golang": "Go",
+    "cpp": "C++",
+    "c plus plus": "C++",
+    "c plus-plus": "C++",
+    "shell scripting": "Shell",
+    "bash scripting": "Shell",
+
+    # Databases
+    "postgresql": "PostgreSQL",
+    "postgre": "PostgreSQL",
+    "mysql": "MySQL",
+    "mariadb": "MySQL",
+    "mongo": "MongoDB",
+    "mongodb": "MongoDB",
+    "dynamodb": "DynamoDB",
+    "sqlite3": "SQLite",
+    "redis": "Redis",
+    "cassandra": "Cassandra",
+    "elastic search": "Elasticsearch",
+    "elasticsearch": "Elasticsearch",
+
+    # DevOps / Infra
+    "docker": "Docker",
+    "k8s": "Kubernetes",
+    "kubernetes": "Kubernetes",
+    "terraform": "Terraform",
+    "ansible": "Ansible",
+    "jenkins": "Jenkins",
+    "github actions": "GitHub Actions",
+    "aws": "AWS",
+    "gcp": "GCP",
+    "google cloud": "GCP",
+    "azure": "Azure",
+    "heroku": "Heroku",
+    "linux": "Linux",
+
+    # Data / ML
+    "pandas": "Pandas",
+    "numpy": "NumPy",
+    "scikit learn": "Scikit-learn",
+    "sklearn": "Scikit-learn",
+    "tensorflow": "TensorFlow",
+    "keras": "Keras",
+    "pytorch": "PyTorch",
+    "matplotlib": "Matplotlib",
+    "seaborn": "Seaborn",
+    "jupyter notebook": "Jupyter",
+    "jupyter": "Jupyter",
+    "spark": "Apache Spark",
+    "hadoop": "Hadoop",
+
+    # Testing
+    "jest": "Jest",
+    "mocha": "Mocha",
+    "pytest": "Pytest",
+    "unittest": "unittest",
+    "selenium": "Selenium",
+    "cypress": "Cypress",
+
+    # Tools
+    "git": "Git",
+    "jira": "Jira",
+    "slack": "Slack",
+    "figma": "Figma",
+    "postman": "Postman",
+    "vscode": "VSCode",
+
+    # Other
+    "graphql": "GraphQL",
+    "rest api": "REST",
+    "restful api": "REST",
+    "soap": "SOAP",
+    "ci/cd": "CI/CD",
+    "tdd": "TDD",
+    "oop": "OOP",
+    "design patterns": "Design Patterns",
+    "etl": "ETL",
+    "data pipelines": "Data Pipelines"
+}
+
