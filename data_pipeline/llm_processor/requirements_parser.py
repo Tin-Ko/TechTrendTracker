@@ -17,10 +17,10 @@ class RequirementsParser:
             return [self.normalize_skill(part) for part in parts]
             
 
-        if skill_normalized in self.canonical_skill_map:
+        if skill_normalized in self.canonical_skill_map.keys():
             skill_normalized = self.canonical_skill_map[skill_normalized]
 
-        if skill_normalized in self.tech_capitalization_map:
+        if skill_normalized in self.tech_capitalization_map.keys():
             skill_normalized = self.tech_capitalization_map[skill_normalized]
 
         skill_normalized = re.sub(r"[^\w\s\+\#]", "", skill_normalized)
@@ -41,10 +41,13 @@ class RequirementsParser:
                 continue
 
             normalized_skill = self.normalize_skill(skill)
-            if normalized_skill:
+            if isinstance(normalized_skill, list):
+                for skill in normalized_skill:
+                    cleaned_skills.add(skill)
+            else:
                 cleaned_skills.add(normalized_skill)
 
         return {
             **data,
-            "skills", sorted(cleaned_skills)
+            "skills": sorted(cleaned_skills)
         }
