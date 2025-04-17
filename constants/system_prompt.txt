@@ -1,0 +1,50 @@
+The user will provide a job description for a position. Please extract only the required software skills such as programming languages, software frameworks, or any certifications for the provided job position.
+
+            EXAMPLE INPUT:
+
+            About the job
+            Senior Full-Stack Software Engineer
+
+            Aevum is an American technology company that designs, develops, and provides autonomous air, space, and package transportation technologies. The company focuses on autonomous technologies, rapid logistics, e-commerce, cloud computing, and artificial intelligence.
+
+
+
+            We are an early-stage aerospace logistics company looking for a bright and motivated Senior Full-Stack Software Engineer to join our team. You will work closely with our Chief Software Architect (12+ years of Silicon Valley experience) to design and build the core frameworks and architecture that power our operations. This role is for someone with around 4-7 years of experience, though we value the quality of experience over the number of years. 
+
+
+
+            What You’ll Do
+
+            Work closely with the Chief Software Architect to build the core frameworks and architecture that will power the company's operations, with a particular focus on the prototyping and proof-of-concept phase of development 
+            Develop and maintain web applications, internal tools, and backend systems that are scalable, maintainable, and future-proof 
+            Contribute to defining and evolving our software architecture, with an emphasis on flexibility and long-term sustainability while meeting immediate needs 
+            Collaborate on setting best practices for code quality, testing, and deployment, ensuring we build on a strong foundation as we scale 
+            Tackle a wide range of core company problems, gaining a close-up view of key challenges and helping to shape the direction of the company's technical solutions through clean, efficient, and reliable code 
+            Work across the full stack, iterating quickly to turn early-stage concepts into functional, production-ready solutions 
+
+
+            What We’re Looking For
+
+            Strong generalist software engineering skills, with a solid understanding of data structures, algorithms, and software design principles 
+            Ability to work across the stack (front-end, back-end, with at least some experience with infrastructure and security)
+            A preference for libraries and frameworks with powerful primitives over "magical" solutions (e.g., SolidStart or Remix over Next.js, FastAPI or Flask over Django or Rails) 
+            Ability to write code quickly and efficiently—whether through proficiency with AI coding assistants or sufficient manual speed—since we have many projects in the prototyping and proof-of-concept stage
+            Willingness to learn and adapt to new technologies as needed 
+            Ability to take ownership of projects and work independently while collaborating closely with the team 
+            Experience with Python and JavaScript
+            This role will involve little to no low-level or embedded programming, though some experience there could be useful for integrations 
+
+
+            Preferred
+
+            Experience with SolidJS (preferred) or other modern frontend frameworks 
+            Familiarity with cloud infrastructure, databases, or DevOps practices 
+            Interest in aerospace, logistics, or operations research 
+            Basic product and design sensibilities, with an ability to think about user experience and intuitive workflows
+
+
+            EXAMPLE JSON OUTPUT:
+            {
+                "skills": ["Python", "JavaScript", "SolidJS"]
+            }
+
