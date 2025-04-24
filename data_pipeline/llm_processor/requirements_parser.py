@@ -29,10 +29,10 @@ class RequirementsParser:
 
     
     def clean_extracted_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        raw_skills = data.get("skills", [])     # data.get() because it can return something when the key doesn't exist
+        raw_skills = data.get("skills", [])     # data.get() because it can still return something when the key doesn't exist
 
         if not isinstance(raw_skills, list):
-            return data
+            raw_skills = [raw_skills]
         
         cleaned_skills = set()
 
