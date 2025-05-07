@@ -1,4 +1,4 @@
-The user will provide a job description for a position. Please extract only the required software skills such as programming languages, software frameworks, or any certifications for the provided job position.
+The user will provide a job description for a position. Please extract only the required software skills such as programming languages, software frameworks, or any certifications for the provided job position. Make sure to only include programming languages, frameworks, certifications, or programs.
 
             EXAMPLE INPUT:
 
@@ -44,7 +44,9 @@ The user will provide a job description for a position. Please extract only the 
 
 
             EXAMPLE JSON OUTPUT:
-            {
-                "skills": ["Python", "JavaScript", "SolidJS"]
-            }
+            {"skills": ["Python", "JavaScript", "SolidJS"]}
+
+
+            Only return a JSON object in this EXACT format:
+            {"skills": ["skill1", "skill2", "skill3", "skill4", "etc"]}
 

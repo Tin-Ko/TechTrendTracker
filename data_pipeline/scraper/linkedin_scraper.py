@@ -6,6 +6,7 @@ import json
 import uuid
 import os
 from datetime import date
+import pika
 
 class LinkedInJobContentSpider(scrapy.Spider):
     name = "linkedin_job_content_spider"
@@ -22,15 +23,19 @@ class LinkedInJobContentSpider(scrapy.Spider):
     }
 
     with open("data_pipeline/scraper/job_links.txt", "r") as f:
-        start_urls = f.readlines()[997:]
+        start_urls = f.readlines()
         print(f"number of job links: {len(start_urls)}")
 
-    # start_urls = ["https://www.linkedin.com/jobs/view/web-software-engineering-intern-at-soundcloud-4195991198?position=1&pageNum=0&refId=1ZSrvc1a0T41JH2uUEbQ%2Bg%3D%3D&trackingId=9JG9xBtQruN8CxIigU4t6A%3D%3D"]
 
     def __init__(self) -> None:
         super().__init__()
         self.hdfs_client = HDFSClient()
-        self.counter = 998
+        self.counter = 0
+        self.connection = pika.BlockingConnection(pika.ConnectionParameters(host="localhost"))
+        self.channel = self.connection.channel()
+
+        self.channel.queue_declare(queue="job_queue", durable=True)
+
 
     def parse(self, response):
         print(f"scraping job number: {self.counter}")
@@ -54,10 +59,21 @@ class LinkedInJobContentSpider(scrapy.Spider):
 
             job_data_json = json.dumps(job_data, ensure_ascii=False, indent=4)
 
-            hdfs_path = os.path.join("/jobs", str(date.today()), f"{uuid.uuid1()}.json")
+            hdfs_path = os.path.join("/jobs", "software_engineer", str(date.today()), f"{uuid.uuid1()}.json")
 
             self.hdfs_client.write(hdfs_path, job_data_json, overwrite=True)
+            
+            self.channel.basic_publish(
+                exchange='',
+                routing_key='job_queue',
+                body=hdfs_path,
+                properties=pika.BasicProperties(
+                    delivery_mode=2,
+                )
+            )
+
             self.counter += 1
+
         except Exception as e:
             print(f"link num: {self.counter}, {response.url} doesn't exist, skipping now...")
             self.counter += 1
