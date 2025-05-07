@@ -1,5 +1,7 @@
 import re
 from typing import List, Dict, Any
+from constants.canonical_skill_map import canonical_skill_map
+from constants.tech_capitalization import tech_capitalization_map
 
 
 class RequirementsParser:
@@ -11,11 +13,15 @@ class RequirementsParser:
     
     def normalize_skill(self, skill: str) -> str:
         skill_normalized = skill.strip().lower()
+        skill_normalized = re.sub(r'\(([^)]+)\)', r'\1', skill_normalized)
+
+        # if " " in skill_normalized:
+        #     parts = skill_normalized.split(" ")
+        #     return [self.normalize_skill(part) for part in parts]
 
         if "/" in skill_normalized:
             parts = skill_normalized.split("/")
             return [self.normalize_skill(part) for part in parts]
-            
 
         if skill_normalized in self.canonical_skill_map.keys():
             skill_normalized = self.canonical_skill_map[skill_normalized]
@@ -26,7 +32,6 @@ class RequirementsParser:
         skill_normalized = re.sub(r"[^\w\s\+\#]", "", skill_normalized)
 
         return skill_normalized
-
     
     def clean_extracted_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
         raw_skills = data.get("skills", [])     # data.get() because it can still return something when the key doesn't exist
@@ -41,13 +46,29 @@ class RequirementsParser:
                 continue
 
             normalized_skill = self.normalize_skill(skill)
-            if isinstance(normalized_skill, list):
-                for skill in normalized_skill:
-                    cleaned_skills.add(skill)
-            else:
-                cleaned_skills.add(normalized_skill)
+            self.clean_extracted_data_recursion(normalized_skill, cleaned_skills)
 
         return {
             **data,
             "skills": sorted(cleaned_skills)
         }
+
+    def clean_extracted_data_recursion(self, skills: list | str, cleaned_skills_set: set) -> set:
+        if isinstance(skills, str):
+            cleaned_skills_set.add(skills)
+        elif isinstance(skills, list):
+            for skill in skills:
+                self.clean_extracted_data_recursion(skill, cleaned_skills_set)
+
+        return cleaned_skills_set
+
+
+        
+
+
+if __name__ == "__main__":
+    data = {'skills': ['C/C++ (Linux)', 'Python', 'Golang']}
+    requirements_parser = RequirementsParser(canonical_skill_map=canonical_skill_map, tech_capitalization_map=tech_capitalization_map)
+
+    cleaned = requirements_parser.clean_extracted_data(data=data)
+    print(cleaned)

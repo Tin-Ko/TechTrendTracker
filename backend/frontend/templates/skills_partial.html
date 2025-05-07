@@ -1,0 +1,11 @@
+<h1>{{ .JobTitle }}</h1>
+<h2>{{ .JobCount }} jobs found</h2>
+<h2>{{ .SkillsCount}} skills found</h2>
+<div>
+    <h3>Top 10 Skills</h3>
+    <ul>
+        {{ range .Skills }}
+        <li>{{ .Name }}: {{ .Count }}, {{.Percentage}}%</li>
+        {{ end }}
+    </ul>
+</div>

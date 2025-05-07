@@ -1,0 +1,109 @@
+/* static/styles.css */
+
+body {
+    margin: 0;
+    background: linear-gradient(55deg, #333333 40%, #0a0a0a);
+    color: white;
+    font-family: 'Segoe UI', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+}
+
+.logo {
+    font-size: 15rem;
+    font-weight: bold;
+    letter-spacing: 0rem;
+    text-shadow: 0px 4px 8px rgba(0, 0, 0, 0.5);
+    margin-bottom: 7rem;
+    align-items: center;
+    justify-content: center;
+}
+
+.search-centered {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    justify-self: center;
+}
+
+.search-top {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    margin-top: 2rem;
+}
+
+.search-top .logo {
+    font-size: 5rem;
+    font-weight: bold;
+    letter-spacing: 0rem;
+    text-shadow: 0px 4px 8px rgba(0, 0, 0, 0.5);
+    margin-right: 5rem;
+    margin-bottom: 0;
+    padding: 0;
+    padding-bottom: 10px;
+}
+
+.search-top .search-container {
+    border: 2px solid #cccccc;
+    width: 1200px;
+    height: 30px;
+}
+
+.search-container {
+    display: flex;
+    align-items: center;
+    background-color: none;
+    border: 4px solid #cccccc;
+    border-radius: 999px;
+    padding: 0.75rem 1rem 0.75rem 2.2rem;
+    width: 1200px;
+    height: 60px;
+    max-width: 100%;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+}
+
+.search-input {
+    flex-grow: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: white;
+    font-size: 1.2rem;
+}
+
+.search-input::placeholder {
+    color: #cccccc;
+}
+
+.search-button {
+    background: #cccccc;
+    border: none;
+    cursor: pointer;
+    aspect-ratio: 1 / 1;
+    height: 100%;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.search-icon {
+    height: 100%;
+    width: 100%;
+    display: block;
+}
+
+
+
+#chart-container {
+    margin-top: 4rem;
+    width: 90%;
+    max-width: 900px;
+}
+
