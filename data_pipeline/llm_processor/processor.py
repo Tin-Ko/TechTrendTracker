@@ -68,7 +68,7 @@ if __name__ == "__main__":
     today_date = date.today()
     jobs_base_path = "/jobs"
     skills_base_path = "/skills"
-    job_title = "software_engineer"
+    job_title = "data_scientist"
     hdfs_job_desc_dir = os.path.join(jobs_base_path, job_title, str(today_date))
     hdfs_save_dir = os.path.join(skills_base_path, job_title, str(today_date))
     

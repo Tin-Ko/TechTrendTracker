@@ -1,10 +1,11 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
+
 	"github.com/Tin-Ko/TechTrendTracker/services"
 	"github.com/Tin-Ko/TechTrendTracker/utils"
-	"html/template"
 )
 
 // Handle GET /skills
@@ -24,14 +25,9 @@ func HandleGetTopSkills(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create template
-	tmpl, err := template.ParseFiles("frontend/templates/skills_partial.html")
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(skillsResponse)
 	if err != nil {
-		utils.HTMLError(w, 500, "Template error: " + err.Error())
+		utils.HTMLError(w, http.StatusInternalServerError, "Failed to encode JSON")
 	}
-
-	w.Header().Set("Content-Type", "text/html")
-
-	// Respond with HTML
-	tmpl.Execute(w, skillsResponse)
 }

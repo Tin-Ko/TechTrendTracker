@@ -6,7 +6,7 @@ from scrapy.utils.project import get_project_settings
 from twisted.internet.defer import waitForDeferred
 
 class LinkedInJobSpider(scrapy.Spider):
-    file_name = os.path.join("data_pipeline", "scraper", "job_links.txt")
+    file_name = os.path.join("data_pipeline", "scraper", "data_science_job_links.txt")
     custom_settings = {
         "DOWNLOAD_DELAY": 4,  # Set a fixed delay of 4 seconds
         "RANDOMIZE_DOWNLOAD_DELAY": True,  # Add randomness to avoid detection
@@ -22,9 +22,9 @@ class LinkedInJobSpider(scrapy.Spider):
     f_TPR = "r604800"
     geoID = "102095887"
     keywords = [
-        "Software%20Engineer",
-        "Full%20Stack%20Developer",
-        "Web%20Developer",
+        "Data%20Scientist",
+        "Data%20Engineer",
+        "Machine%20Learning%20Engineer",
     ]
     # keywords = [
     #     "Software%20Engineer",
@@ -91,7 +91,7 @@ class LinkedInJobSpider(scrapy.Spider):
                 f.write(link + "\n")
 
 if __name__ == "__main__":
-    joblinks_path = os.path.join("data_pipeline", "scraper", "job_links.txt")
+    joblinks_path = os.path.join("data_pipeline", "scraper", "data_science_job_links.txt")
     if(os.path.exists(joblinks_path)):
         print("job_links.txt exists, deleting...")
         os.remove(joblinks_path)

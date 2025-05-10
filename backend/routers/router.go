@@ -10,8 +10,10 @@ func New() *http.ServeMux {
 	mux := http.NewServeMux()
 
 	// API routes
+	mux.HandleFunc("/chart", handlers.HandleGetChart)
 	mux.HandleFunc("/skills", handlers.HandleGetTopSkills)
 	mux.HandleFunc("/", handlers.HomeHandler)
+	mux.HandleFunc("/test", handlers.TestHandler)
 
 	// Static files
 	staticFS := http.FileServer(http.Dir("frontend/static"))
