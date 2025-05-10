@@ -22,7 +22,7 @@ class LinkedInJobContentSpider(scrapy.Spider):
         "AUTOTHROTTLE_TARGET_CONCURRENCY": 1.0,  # One request at a time
     }
 
-    with open("data_pipeline/scraper/job_links.txt", "r") as f:
+    with open("data_pipeline/scraper/data_science_job_links.txt", "r") as f:
         start_urls = f.readlines()
         print(f"number of job links: {len(start_urls)}")
 
@@ -59,7 +59,7 @@ class LinkedInJobContentSpider(scrapy.Spider):
 
             job_data_json = json.dumps(job_data, ensure_ascii=False, indent=4)
 
-            hdfs_path = os.path.join("/jobs", "software_engineer", str(date.today()), f"{uuid.uuid1()}.json")
+            hdfs_path = os.path.join("/jobs", "data_scientist", str(date.today()), f"{uuid.uuid1()}.json")
 
             self.hdfs_client.write(hdfs_path, job_data_json, overwrite=True)
             

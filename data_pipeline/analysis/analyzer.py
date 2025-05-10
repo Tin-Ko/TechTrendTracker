@@ -11,7 +11,7 @@ class JobSkillAnalyzer:
         self.spark = SparkSession.builder.appName("SkillAnalysis").config("spark.hadoop.fs.defaultFS", "hdfs://localhost:9000").getOrCreate()
         self.job_skills_path = job_skills_path
         self.df = self._load_data()
-        self.df = self.df.withColumn("job_title", lit("software engineer"))
+        self.df = self.df.withColumn("job_title", lit("data scientist"))
         self.conn = psycopg.connect(
             dbname=db_params['dbname'],
             user=db_params['user'],
@@ -100,6 +100,6 @@ if __name__ == "__main__":
         "port": "5432"
     }
     today_date = date.today()
-    skills_path = os.path.join("hdfs:///skills", "software_engineer", "2025-05-01", "*.json")
-    analyzer = JobSkillAnalyzer(job_title="software engineer", job_skills_path=skills_path, db_params=db_params)
+    skills_path = os.path.join("hdfs:///skills", "data_scientist", str(today_date), "*.json")
+    analyzer = JobSkillAnalyzer(job_title="data scientist", job_skills_path=skills_path, db_params=db_params)
     analyzer.save_to_postgres()

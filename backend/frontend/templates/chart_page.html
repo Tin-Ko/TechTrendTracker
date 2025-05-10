@@ -1,0 +1,49 @@
+{{ define "content" }}
+<div class="flex-1 flex flex-row items-center justify-between w-full">
+    <div class="flex-1 h-full justify-start align-start">
+        <div id="logo-text-top" class="flex text-7xl items-center justify-center font-bold tracking-tight drop-shadow-lg w-fit h-fit mt-10 ml-12">TTT</div>
+    </div>
+    <div id="top-center" class="flex h-full lg:w-[45%] w-[60%] items-center justify-center">
+        <form 
+            id="search-form"
+            class="flex flex-row items-center border-2 border-gray-300 border-opacity-70 rounded-full py-2 pr-2 pl-7 lg:h-[60px] h-[40px] w-full"
+            action="/chart"
+            method="get"
+        >
+            <input 
+                type="text" 
+                name="job_title" 
+                class="flex-grow bg-transparent border-none outline-none text-white text-lg lg:text-xl placeholder-gray-300" 
+                placeholder="What positions are you looking for?" 
+                required 
+            />
+            <button id="arrow-button" class="bg-gray-300 aspect-square h-full rounded-full flex items-center justify-center" type="submit">
+                <svg id="arrow-icon" class="lg:w-[32px] lg:h-[32px] w-[24px] h-[24px] text-gray-800 dark:text-black" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M19 12H5m14 0-4 4m4-4-4-4"/>
+                </svg>
+            </button>
+        </form>
+    </div>
+    <div class="flex-1 h-full"></div>
+</div>
+<div class="flex flex-row lg:w-[45%] w-[60%] justify-center">
+    <div id="chart-container"
+        data-job-title="{{ .JobTitle }}"
+        class="bg-zinc-600/50 rounded-xl overflow-hidden w-full border border-zinc-400 border-opacity-50 w-full"
+    >
+        <canvas id="tech-skills-chart" class="w-full h-full"></canvas>
+        <script src="/static/barChart.js"></script>
+    </div>
+    <div class="flex flex-col items-center justify-evenly w-fit h-full pl-8">
+        <div class="rounded-xl h-fit w-fit bg-zinc-600/50 items-center justify-center px-8 py-8 border-zinc-400 border border-opacity-50">
+            <div class="text-xl lg:text-4xl font-bold w-full h-fit text-center text-nowrap">{{ .JobCount }}</div>
+            <div class="mt-4 text-center w-full">Jobs Found</div>
+        </div>
+        <div class="rounded-xl h-fit w-fit bg-zinc-600/50 items-center justify-center px-8 py-8 border-zinc-400 border border-opacity-50">
+            <div class="text-xl lg:text-4xl font-bold w-full h-fit text-center text-nowrap">{{ .SkillCount }}</div>
+            <div class="mt-4 text-center w-full">Skills Found</div>
+        </div>
+    </div>
+</div>
+<div class="flex flex-1 w-full"></div>
+{{ end }}
