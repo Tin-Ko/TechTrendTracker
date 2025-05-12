@@ -3,7 +3,7 @@
     <div class="flex-1 h-full justify-start align-start">
         <div id="logo-text-top" class="flex text-7xl items-center justify-center font-bold tracking-tight drop-shadow-lg w-fit h-fit mt-10 ml-12">TTT</div>
     </div>
-    <div id="top-center" class="flex h-full lg:w-[45%] w-[60%] items-center justify-center">
+    <div id="top-center" class="flex h-full lg:w-[60%] w-[60%] items-center justify-center">
         <form 
             id="search-form"
             class="flex flex-row items-center border-2 border-gray-300 border-opacity-70 rounded-full py-2 pr-2 pl-7 lg:h-[60px] h-[40px] w-full"
@@ -26,7 +26,7 @@
     </div>
     <div class="flex-1 h-full"></div>
 </div>
-<div class="flex flex-row lg:w-[45%] w-[60%] justify-center">
+<div class="flex flex-row lg:w-[60%] w-[60%] justify-center">
     <div id="chart-container"
         data-job-title="{{ .JobTitle }}"
         class="bg-zinc-600/50 rounded-xl overflow-hidden w-full border border-zinc-400 border-opacity-50 w-full"
@@ -34,16 +34,17 @@
         <canvas id="tech-skills-chart" class="w-full h-full"></canvas>
         <script src="/static/barChart.js"></script>
     </div>
-    <div class="flex flex-col items-center justify-evenly w-fit h-full pl-8">
-        <div class="rounded-xl h-fit w-fit bg-zinc-600/50 items-center justify-center px-8 py-8 border-zinc-400 border border-opacity-50">
+</div>
+<div class="flex flex-1 w-full justify-center items-center">
+    <div class="flex flex-row items-center justify-evenly w-[60%] h-full">
+        <div class="flex flex-col rounded-xl h-fit w-[20%] bg-zinc-600/50 items-center justify-center px-6 py-6 border-zinc-400 border border-opacity-50">
             <div class="text-xl lg:text-4xl font-bold w-full h-fit text-center text-nowrap">{{ .JobCount }}</div>
             <div class="mt-4 text-center w-full">Jobs Found</div>
         </div>
-        <div class="rounded-xl h-fit w-fit bg-zinc-600/50 items-center justify-center px-8 py-8 border-zinc-400 border border-opacity-50">
+        <div class="flex flex-col rounded-xl h-fit w-[20%] bg-zinc-600/50 items-center justify-center px-6 py-6 border-zinc-400 border border-opacity-50">
             <div class="text-xl lg:text-4xl font-bold w-full h-fit text-center text-nowrap">{{ .SkillCount }}</div>
             <div class="mt-4 text-center w-full">Skills Found</div>
         </div>
     </div>
 </div>
-<div class="flex flex-1 w-full"></div>
 {{ end }}
