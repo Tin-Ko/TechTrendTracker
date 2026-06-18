@@ -1,0 +1,49 @@
+# Anything not needed by the multi-stage build belongs here. Keeps the
+# build context small (faster uploads to Cloud Build) and prevents
+# secrets / local state from leaking into image layers.
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Secrets and local env
+.env
+.env.example
+.envrc
+
+# Editor / tooling
+.vscode
+.idea
+.claude
+
+# Python local dev
+.venv
+TTT/
+**/__pycache__
+**/*.pyc
+**/*.pyo
+data_pipeline/llm_processor/config.py
+
+# Node — Dockerfile installs fresh via `npm ci`
+**/node_modules
+frontend/dist
+
+# Frontend doesn't need backend / Python / etc., but copied dirs are
+# whitelisted in the Dockerfile, so excluding everything else is safe.
+
+# Local runtime state
+logs/
+job_postings/
+
+# Model — re-exported in Docker stage 1
+models/
+
+# Local Go build cache (not normally in repo, defensive)
+backend/server
+backend/_out
+
+# Docs (not needed at runtime; reduces context size)
+*.md
+Readme.md
+LICENSE

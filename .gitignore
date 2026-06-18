@@ -3,3 +3,21 @@ TTT/
 data_pipeline/llm_processor/config.py
 
 search_design.md
+
+.venv
+.env
+.env.example
+.envrc
+
+logs/
+
+job_postings/
+
+# ONNX model export — regenerated at Docker build time via optimum-cli.
+# Locally: run setup.md §5 to produce these files.
+models/
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo

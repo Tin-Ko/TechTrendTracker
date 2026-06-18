@@ -1,101 +1,93 @@
+"""Link harvester: walks LinkedIn job search result pages and publishes each
+posting URL to RabbitMQ `urls_queue`. The content worker
+(`data_pipeline/scraper/content_worker.py`) consumes from that queue.
+
+Cron-driven, one-shot — exits when the Scrapy crawl finishes.
+"""
+
 import os
-from os.path import join
+
+import pika
 import scrapy
 from scrapy.crawler import CrawlerProcess
 from scrapy.utils.project import get_project_settings
-from twisted.internet.defer import waitForDeferred
+
+
+RABBITMQ_HOST = os.environ.get("RABBITMQ_HOST", "localhost")
+URLS_QUEUE = "urls_queue"
+
 
 class LinkedInJobSpider(scrapy.Spider):
-    file_name = os.path.join("data_pipeline", "scraper", "data_science_job_links.txt")
+    name = "linkedin_jobs"
+
     custom_settings = {
-        "DOWNLOAD_DELAY": 4,  # Set a fixed delay of 4 seconds
-        "RANDOMIZE_DOWNLOAD_DELAY": True,  # Add randomness to avoid detection
-        "AUTOTHROTTLE_ENABLED": True,  # Enable AutoThrottle for better crawling
-        "AUTOTHROTTLE_START_DELAY": 4,  # Minimum delay
-        "AUTOTHROTTLE_MAX_DELAY": 8,  # Maximum delay
-        "AUTOTHROTTLE_TARGET_CONCURRENCY": 1.0,  # One request at a time
+        "DOWNLOAD_DELAY": 4,
+        "RANDOMIZE_DOWNLOAD_DELAY": True,
+        "AUTOTHROTTLE_ENABLED": True,
+        "AUTOTHROTTLE_START_DELAY": 4,
+        "AUTOTHROTTLE_MAX_DELAY": 8,
+        "AUTOTHROTTLE_TARGET_CONCURRENCY": 1.0,
     }
 
-    name = "linkedin_jobs"
     start_url = "https://www.linkedin.com/jobs/search/?"
     f_E = ["1", "2", "3", "4"]
     f_TPR = "r604800"
     geoID = "102095887"
     keywords = [
         "Data%20Scientist",
-        "Data%20Engineer",
-        "Machine%20Learning%20Engineer",
     ]
-    # keywords = [
-    #     "Software%20Engineer",
-    #     "Full%20Stack%20Developer",
-    #     "Backend%20Developer",
-    #     "Frontend%20Developer",
-    #     "Mobile%20App%20Developer",
-    #     "Embedded%20Systems%20Engineer",
-    #     "DevOps%20Engineer",
-    #     "Site%20Reliability%20Engineer",
-    #     "Cloud%20Engineer",
-    #     "Game%20Developer",
-    #     "Machine%20Learning%20Engineer",
-    #     "Data%20Scientist",
-    #     "AI%20Researcher",
-    #     "Deep%20Learning%20Engineer", 
-    #     "NLP%20Engineer",
-    #     "Computer%20Vision%20Engineer",
-    #     "Data%20Engineer",
-    #     "Big%20Data%20Engineer",
-    #     "Cybersecurity%20Analyst",
-    #     "Ethical%20Hacker",
-    #     "Penetration%20Tester",
-    #     "Security%20Engineer",
-    #     "Network%20Security%20Engineer",
-    #     "Cloud%20Security%20Engineer",
-    #     "Incident%20Response%20Analyst",
-    #     "Digital%20Forensics%20Analyst",
-    #     "Cryptographer",
-    #     "Network%20Engineer",
-    #     "System%20Administrator",
-    #     "Cloud%20Architect",
-    #     "IT%20Support%20Specialist",
-    #     "Linux%20System%20Administrator",
-    #     "Database%20Administrator",
-    #     "Web%20Developer",
-    #     "UI%2FUX%20Designer",
-    #     "Frontend%20Engineer",
-    #     "Interaction%20Designer",
-    #     "Web%20Security%20Engineer",
-    #     "Hardware%20Engineer",
-    #     "Embedded%20Systems%20Developer",
-    #     "IoT%20Engineer",
-    #     "FPGA%20Engineer",
-    #     "QA%20Engineer",
-    #     "Test%20Automation%20Engineer",
-    #     "Software%20Development%20Engineer%20in%20Test",
-    #     "Blockchain%20Developer",
-    #     "Quantum%20Computing%20Researcher",
-    #     "Robotics%20Engineer",
-    #     "AR%2FVR%20Developer",
-    #     "Technical%20Program%20Manager",
-    # ]
     origin = "JOB_SEARCH_PAGE_SEARCH_BUTTON"
     start_urls = []
     for experience in f_E:
         for keyword in keywords:
-            start_urls.append(start_url + "f_E="+ experience + "&f_TPR=" + f_TPR + "&geoID=" + geoID + "&keywords=" + keyword + "&origin=" + origin + "&refresh=true")
-    
+            start_urls.append(
+                start_url
+                + "f_E=" + experience
+                + "&f_TPR=" + f_TPR
+                + "&geoID=" + geoID
+                + "&keywords=" + keyword
+                + "&origin=" + origin
+                + "&refresh=true"
+            )
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.connection = pika.BlockingConnection(
+            pika.ConnectionParameters(host=RABBITMQ_HOST)
+        )
+        self.channel = self.connection.channel()
+        self.channel.queue_declare(queue=URLS_QUEUE, durable=True)
+        self.published = 0
+
     def parse(self, response):
-        job_links = response.css('ul.jobs-search__results-list a.base-card__full-link::attr(href)').getall()
-        with open(self.file_name, "a", encoding="utf-8") as f:
-            for _, link in enumerate(job_links):
-                f.write(link + "\n")
+        job_links = response.css(
+            'ul.jobs-search__results-list a.base-card__full-link::attr(href)'
+        ).getall()
+        for link in job_links:
+            url = link.strip()
+            if not url:
+                continue
+            self.channel.basic_publish(
+                exchange="",
+                routing_key=URLS_QUEUE,
+                body=url,
+                properties=pika.BasicProperties(delivery_mode=2),
+            )
+            self.published += 1
+        self.logger.info(
+            "published %d urls (cumulative %d) from %s",
+            len(job_links), self.published, response.url,
+        )
+
+    def closed(self, reason):
+        self.logger.info("spider closed (%s); total published: %d", reason, self.published)
+        try:
+            self.connection.close()
+        except Exception:
+            pass
+
 
 if __name__ == "__main__":
-    joblinks_path = os.path.join("data_pipeline", "scraper", "data_science_job_links.txt")
-    if(os.path.exists(joblinks_path)):
-        print("job_links.txt exists, deleting...")
-        os.remove(joblinks_path)
-
     process = CrawlerProcess(get_project_settings())
     process.crawl(LinkedInJobSpider)
     process.start()

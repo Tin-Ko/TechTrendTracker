@@ -3,25 +3,38 @@ package utils
 import (
 	"database/sql"
 	"fmt"
+	"os"
+
 	_ "github.com/lib/pq"
 )
 
 var DB *sql.DB
 
-func InitDB(host string, port string, user string, password string, dbname string) error {
-	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
+// InitDB opens a pooled Supabase Postgres connection.
+//
+// In production this should be the Supavisor pooled DSN
+// (port 6543, transaction mode) — Cloud Run fans out across many instances
+// and the Supabase free tier caps direct (5432) connections around 60.
+// Pass the DSN via the SUPABASE_DB_URL env var.
+func InitDB() error {
+	dsn := os.Getenv("SUPABASE_DB_URL")
+	if dsn == "" {
+		return fmt.Errorf("SUPABASE_DB_URL not set")
+	}
 
-	db, err := sql.Open("postgres", psqlInfo)
+	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		return err
 	}
-
 	if err := db.Ping(); err != nil {
 		return err
 	}
 
-	DB = db
-	fmt.Printf("Successfully connected to database, host = %s, db name = %s\n", host, dbname)
+	// Keep the pool small per-instance; Cloud Run spawns many instances.
+	db.SetMaxOpenConns(8)
+	db.SetMaxIdleConns(4)
 
+	DB = db
+	fmt.Println("Connected to Supabase Postgres")
 	return nil
 }

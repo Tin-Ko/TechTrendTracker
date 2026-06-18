@@ -4,32 +4,30 @@ import (
 	"log"
 	"net/http"
 	"os"
+
 	"github.com/Tin-Ko/TechTrendTracker/routers"
+	"github.com/Tin-Ko/TechTrendTracker/services"
 	"github.com/Tin-Ko/TechTrendTracker/utils"
 )
 
-
 func main() {
-	// Initialize database
-	err := utils.InitDB("localhost", "5432", "bartsuper", "abcd1234", "skillsDB")
-	if err != nil {
-		log.Fatal(err)
+	if err := utils.InitDB(); err != nil {
+		log.Fatalf("DB init failed: %v", err)
 	}
 
+	if err := services.InitEmbedService(); err != nil {
+		log.Fatalf("Embed service init failed: %v", err)
+	}
 
 	mux := routers.New()
-	
-	// Start server
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
-
 	log.Printf("Server starting at port %s\n", port)
-	err = http.ListenAndServe("0.0.0.0:" + port, mux)
 
-	if err != nil {
-		log.Fatalf("Server failed to start: %v\n", err)	
+	if err := http.ListenAndServe("0.0.0.0:"+port, mux); err != nil {
+		log.Fatalf("Server failed to start: %v\n", err)
 	}
-
 }
