@@ -22,7 +22,8 @@ FROM python:3.12-slim AS model_export
 RUN pip install --no-cache-dir \
         "optimum[exporters]==1.24.0" \
         "transformers==4.46.3" \
-        "sentence-transformers==3.3.1"
+        "sentence-transformers==3.3.1" \
+        "onnxscript==0.1.0"
 
 RUN optimum-cli export onnx \
         --model BAAI/bge-small-en-v1.5 \
