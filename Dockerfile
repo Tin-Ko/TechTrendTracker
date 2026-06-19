@@ -12,32 +12,33 @@
 #   docker build -t ttt-backend .
 
 # ============================================================================
-# Stage 1: export bge-small-en-v1.5 to ONNX
-# Deterministic given the pinned upstream model + optimum/transformers versions.
-# Heavy (~3 min on Cloud Build) but Docker caches the layer — only re-runs
-# when one of these RUNs actually changes.
+# Stage 1: fetch the pre-converted ONNX of bge-small-en-v1.5 from HF Hub.
+#
+# We used to run `optimum-cli export onnx` here, but that chain (torch +
+# optimum) keeps growing new dynamo-exporter dependencies (onnxscript,
+# onnx_ir, ...) and unconditionally pulls in ~1.5 GiB of NVIDIA CUDA
+# wheels we don't need.  Xenova's port hosts the same BAAI weights
+# already in ONNX form — three curl calls, no Python, ~10s.
+#
+# Local dev does the same fetch (setup.md §5).  Both planes share the
+# same artifact, which is what our embedding-parity test requires.
 # ============================================================================
-FROM python:3.12-slim AS model_export
+FROM debian:bookworm-slim AS model_export
 
-# Install CPU-only torch FIRST, pinned to a version whose torch.onnx.export
-# still uses the legacy tracer-based path. Newer torch (>=2.6 with the
-# dynamo exporter) drags in onnxscript + onnx_ir + ~1.5 GiB of NVIDIA
-# CUDA wheels, none of which we need (no GPU at build or runtime).
-RUN pip install --no-cache-dir \
-        --index-url https://download.pytorch.org/whl/cpu \
-        "torch==2.5.1"
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates curl \
+ && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir \
-        "optimum[exporters]==1.24.0" \
-        "transformers==4.46.3" \
-        "sentence-transformers==3.3.1"
+ARG HF_REPO=Xenova/bge-small-en-v1.5
+ARG HF_BASE=https://huggingface.co/${HF_REPO}/resolve/main
+ARG MODEL_DIR=/out/models/bge-small-en-v1.5
 
-RUN optimum-cli export onnx \
-        --model BAAI/bge-small-en-v1.5 \
-        --task feature-extraction \
-        /out/models/bge-small-en-v1.5 \
- && test -f /out/models/bge-small-en-v1.5/model.onnx \
- && test -f /out/models/bge-small-en-v1.5/tokenizer.json
+RUN mkdir -p ${MODEL_DIR} \
+ && curl -fsSL -o ${MODEL_DIR}/model.onnx       ${HF_BASE}/onnx/model.onnx \
+ && curl -fsSL -o ${MODEL_DIR}/tokenizer.json   ${HF_BASE}/tokenizer.json \
+ && curl -fsSL -o ${MODEL_DIR}/config.json      ${HF_BASE}/config.json \
+ && test -f ${MODEL_DIR}/model.onnx \
+ && test -f ${MODEL_DIR}/tokenizer.json
 
 # ============================================================================
 # Stage 2: build the Vite + React frontend
