@@ -19,11 +19,18 @@
 # ============================================================================
 FROM python:3.12-slim AS model_export
 
+# Install CPU-only torch FIRST, pinned to a version whose torch.onnx.export
+# still uses the legacy tracer-based path. Newer torch (>=2.6 with the
+# dynamo exporter) drags in onnxscript + onnx_ir + ~1.5 GiB of NVIDIA
+# CUDA wheels, none of which we need (no GPU at build or runtime).
+RUN pip install --no-cache-dir \
+        --index-url https://download.pytorch.org/whl/cpu \
+        "torch==2.5.1"
+
 RUN pip install --no-cache-dir \
         "optimum[exporters]==1.24.0" \
         "transformers==4.46.3" \
-        "sentence-transformers==3.3.1" \
-        "onnxscript==0.1.0"
+        "sentence-transformers==3.3.1"
 
 RUN optimum-cli export onnx \
         --model BAAI/bge-small-en-v1.5 \
