@@ -3,6 +3,8 @@ package services
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/Tin-Ko/TechTrendTracker/utils"
 )
@@ -22,70 +24,93 @@ type Skill struct {
 	Percentage float32
 }
 
-// Hybrid retrieval constants. Two-stage:
-//   1. ANN preselect: top annPoolSize postings by cosine similarity
-//      (HNSW-accelerated).
-//   2. Re-rank: blend vec_sim with pg_trgm similarity(job_title, query),
-//      filter by combinedFloor, take top matchLimit.
+// Hybrid retrieval constants. Two retrievers run independently, then merge:
+//   1. semantic_search: top `semanticPoolSize` postings by cosine similarity
+//      (HNSW-accelerated via the pgvector index).
+//   2. lexical_search:  top `lexicalPoolSize` postings by pg_trgm similarity,
+//      gated by `job_title % $4` so the GIN trigram index does the heavy
+//      lifting instead of a sequential similarity() scan.
+//   3. FULL OUTER JOIN on posting_id; missing scores coalesce to 0.
+//   4. Filter by combinedFloor, take top matchLimit, aggregate skills.
 //
-// Trigram tolerance catches typos like "embeded" -> "embedded" that the
-// bge-small subword tokenizer mishandles in pure-cosine mode.
-// Two-stage retrieval, tuned against the current dataset (June 2026):
-//   - "embedded software engineer"  -> only embedded postings, no SWE noise
-//   - "embeded software engineer"   -> same (typo recovered via trigram)
-//   - "software engineer"           -> broad SWE results
+// Trigram weight > vector weight because typos/substring matches are the
+// failure case (e.g. "embeded" → can't reach Embedded SE via embedding alone).
 //
-// Trigram is weighted higher than the vector because typos/substring matches
-// are the failure case we're solving here. The 0.80 floor sits comfortably
-// between the typo-case score for Embedded (~0.87) and SWE (~0.78).
-//
-// Sizing notes:
-//   - `combinedFloor` is the real relevance filter.
-//   - `annPoolSize` only bounds the HNSW candidate walk — it must stay
-//     comfortably above the number of above-threshold matches any realistic
-//     query produces; otherwise we silently drop relevant postings.
-//   - `matchLimit` is a safety valve, NOT a "top K" knob. Set equal to
-//     `annPoolSize` so the threshold does all the gating and every
-//     above-threshold posting feeds the skill histogram.
-// Revisit these once the dataset crosses ~10k postings or queries start to
-// regularly produce more than ~1500 above-threshold matches.
+// Note on the 0.80 floor under FULL OUTER JOIN semantics: postings that
+// appear in only ONE pool get the missing signal scored as 0, so they
+// effectively need to be strong on the present signal AND meet the floor.
+// This is intentional — both signals are required to clear the bar.
 const (
-	annPoolSize   = 2000
-	matchLimit    = 2000
-	vectorWeight  = 0.4
-	trgmWeight    = 0.6
-	combinedFloor = 0.80
+	semanticPoolSize = 500
+	lexicalPoolSize  = 500
+	matchLimit       = 2000
+	vectorWeight     = 0.4
+	trgmWeight       = 0.6
+	combinedFloor    = 0.80
 )
 
-// matchedCTE is the shared two-stage matched-set SQL. Selects whatever
-// columns the caller lists; the outer query then aggregates from `matched`.
-// Bind vars: $1 query vector literal, $2 seniority filter (nullable),
-// $3 year floor (nullable), $4 normalized query string for trigram.
-const matchedCTE = `
-WITH ann AS (
+// matchedCTETemplate is the shared hybrid matched-set SQL. The outer query
+// aggregates from `matched`. Constant numeric values get substituted in via
+// strings.Replacer (not fmt.Sprintf — the `%` in `job_title % $4` is the
+// pg_trgm operator and would collide with format verbs).
+//
+// Postgres bind vars passed at query time:
+//   $1 query vector literal
+//   $2 seniority filter (nullable)
+//   $3 year floor (nullable)
+//   $4 normalized query string for trigram
+const matchedCTETemplate = `
+WITH semantic_search AS (
+    -- top-K by cosine similarity (HNSW-indexed)
     SELECT posting_id, job_title, skills,
            1 - (title_embedding <=> $1::vector) AS vec_sim
     FROM job_postings
     WHERE ($2::text IS NULL OR seniority = $2 OR seniority = 'unknown')
       AND ($3::int  IS NULL OR posting_year >= $3)
     ORDER BY title_embedding <=> $1::vector
-    LIMIT %d
+    LIMIT {{SEMANTIC_LIMIT}}
 ),
-scored AS (
-    SELECT *,
-           similarity(job_title, $4) AS trgm_sim,
-           (%f * vec_sim + %f * similarity(job_title, $4)) AS combined
-    FROM ann
+lexical_search AS (
+    -- top-K by trigram similarity (GIN-indexed via the % operator)
+    SELECT posting_id, job_title, skills,
+           similarity(job_title, $4) AS trgm_sim
+    FROM job_postings
+    WHERE ($2::text IS NULL OR seniority = $2 OR seniority = 'unknown')
+      AND ($3::int  IS NULL OR posting_year >= $3)
+      AND job_title % $4
+    ORDER BY similarity(job_title, $4) DESC
+    LIMIT {{LEXICAL_LIMIT}}
+),
+combined_results AS (
+    -- merge by posting_id; postings in only one pool get the missing signal as 0
+    SELECT
+        COALESCE(s.posting_id, l.posting_id) AS posting_id,
+        COALESCE(s.job_title,  l.job_title)  AS job_title,
+        COALESCE(s.skills,     l.skills)     AS skills,
+        COALESCE(s.vec_sim,  0)              AS vec_sim,
+        COALESCE(l.trgm_sim, 0)              AS trgm_sim,
+        ({{VEC_W}}  * COALESCE(s.vec_sim, 0)
+       + {{TRGM_W}} * COALESCE(l.trgm_sim, 0)) AS combined
+    FROM semantic_search s
+    FULL OUTER JOIN lexical_search l ON s.posting_id = l.posting_id
 ),
 matched AS (
-    SELECT * FROM scored
-    WHERE combined > %f
+    SELECT * FROM combined_results
+    WHERE combined > {{FLOOR}}
     ORDER BY combined DESC
-    LIMIT %d
+    LIMIT {{MATCH_LIMIT}}
 )`
 
 func buildMatchedCTE() string {
-	return fmt.Sprintf(matchedCTE, annPoolSize, vectorWeight, trgmWeight, combinedFloor, matchLimit)
+	r := strings.NewReplacer(
+		"{{SEMANTIC_LIMIT}}", strconv.Itoa(semanticPoolSize),
+		"{{LEXICAL_LIMIT}}",  strconv.Itoa(lexicalPoolSize),
+		"{{VEC_W}}",          strconv.FormatFloat(vectorWeight, 'f', 4, 64),
+		"{{TRGM_W}}",         strconv.FormatFloat(trgmWeight, 'f', 4, 64),
+		"{{FLOOR}}",          strconv.FormatFloat(combinedFloor, 'f', 4, 64),
+		"{{MATCH_LIMIT}}",    strconv.Itoa(matchLimit),
+	)
+	return r.Replace(matchedCTETemplate)
 }
 
 // GetTopSkills runs the hybrid query: ANN preselect -> trigram blend ->
