@@ -112,6 +112,17 @@ curl -fsS --max-time 2 http://localhost:11434/api/tags >/dev/null \
     || fail "ollama not reachable on :11434 (sudo systemctl start ollama)"
 ok "ollama reachable"
 
+# Ports must be free up front. A leftover backend/frontend from a previous run
+# (e.g. a go-run orphan still bound to :8080) makes the new service fail to
+# bind; because the foreground blocks on `wait -n`, that immediate exit tears
+# the whole stack down — the "run.sh stops on its own" symptom. Fail loud here.
+for port in "${PORT:-8080}" 5173; do
+    if ss -ltn "sport = :$port" 2>/dev/null | grep -q ":$port\b"; then
+        fail "port $port already in use (leftover from a previous run?) — free it with: fuser -k $port/tcp"
+    fi
+done
+ok "ports ${PORT:-8080} + 5173 free"
+
 # ----- bring up RabbitMQ -----
 hdr "rabbitmq"
 docker compose up -d rabbitmq >/dev/null
@@ -160,7 +171,7 @@ launch() {
 
 launch processor      "$PYBIN" -m data_pipeline.llm_processor.processor
 launch content_worker "$PYBIN" -m data_pipeline.scraper.content_worker
-launch backend        bash -c "cd backend && go run ."
+launch backend        bash -c "cd backend && go build -o ./.bin/server . && exec ./.bin/server"
 launch frontend       bash -c "cd frontend && npm run dev -- --host 0.0.0.0"
 
 # ----- trap & wait -----

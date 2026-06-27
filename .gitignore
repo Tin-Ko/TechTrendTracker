@@ -21,3 +21,6 @@ models/
 __pycache__/
 *.pyc
 *.pyo
+
+# Local backend build output (run.sh builds + execs this instead of `go run`)
+backend/.bin/
