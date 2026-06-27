@@ -17,6 +17,7 @@ func New() *http.ServeMux {
 
 	// JSON API
 	mux.HandleFunc("/skills", handlers.HandleGetTopSkills)
+	mux.HandleFunc("/recommendations", handlers.HandleGetRecommendations)
 
 	// SPA static files + history-mode fallback. Any GET that isn't an API
 	// route falls through to here: try to serve a real file under

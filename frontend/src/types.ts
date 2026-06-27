@@ -14,3 +14,17 @@ export type SkillsResponse = {
   Skills: Skill[] | null;
   RelatedTitles: string[] | null;
 };
+
+// Matches backend/services/recommend_service.go.
+
+export type ProjectRec = {
+  Title: string;
+  Level: string;
+  Blurb: string;
+  Skills: string[];
+};
+
+export type RecommendationsResponse = {
+  TopSkills: string[] | null;
+  Projects: ProjectRec[] | null;
+};
