@@ -24,3 +24,10 @@ __pycache__/
 
 # Local backend build output (run.sh builds + execs this instead of `go run`)
 backend/.bin/
+
+# WSL/Windows metadata cruft (alternate data streams on downloaded files)
+*:Zone.Identifier
+*:mshield
+
+# TypeScript incremental build cache (generated)
+frontend/tsconfig.tsbuildinfo

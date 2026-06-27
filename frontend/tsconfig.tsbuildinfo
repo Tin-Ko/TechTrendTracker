@@ -1,1 +1,0 @@
-{"root":["./src/App.tsx","./src/api.ts","./src/main.tsx","./src/types.ts","./src/vite-env.d.ts","./src/components/RelatedTitles.tsx","./src/components/SearchBar.tsx","./src/components/SkillsBarChart.tsx","./src/components/StatCard.tsx","./src/pages/ChartPage.tsx","./src/pages/Home.tsx"],"version":"5.9.3"}
