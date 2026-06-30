@@ -31,7 +31,7 @@ JOB_QUEUE = "job_queue"
 
 # Gemma 4 served by a local Ollama daemon (design §4 ingest plane).
 # Override with LLM_MODEL=<ollama-tag> if your install uses a different tag.
-LLM_MODEL = os.environ.get("LLM_MODEL", "gemma3:latest")
+LLM_MODEL = os.environ.get("LLM_MODEL", "gemma4:latest")
 
 
 class Processor:
