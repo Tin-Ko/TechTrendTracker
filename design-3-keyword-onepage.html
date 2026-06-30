@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>KEYWORD — Design 3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F7F6F1; --ink:#15140F; --ink-2:#56544A; --card:#FFFFFF;
+    --line:#E5E2D6; --mark:#D7F25B; --mark-dk:#9BB72A;
+    --pink:#FF3D77; --pink-soft:#FFE3ED; --redact:#1B1A14;
+    --display:'Archivo',system-ui,sans-serif;
+    --body:'IBM Plex Sans',system-ui,sans-serif;
+    --mono:'Space Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);
+    -webkit-font-smoothing:antialiased;line-height:1.5}
+  .wrap{max-width:1100px;margin:0 auto;padding:0 26px}
+  a{color:inherit;text-decoration:none}
+  .mono{font-family:var(--mono)}
+  .mk{background:linear-gradient(104deg,rgba(215,242,91,0) .9%,var(--mark) 1.6%,var(--mark) 96%,rgba(215,242,91,0) 99%);
+    padding:.05em .18em;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+
+  .nav{position:sticky;top:0;z-index:40;background:var(--paper);border-bottom:2px solid var(--ink)}
+  .nav .row{display:flex;align-items:center;gap:24px;height:66px}
+  .brand{font-family:var(--display);font-weight:900;font-size:21px;letter-spacing:-.02em;
+    display:flex;align-items:center;gap:9px}
+  .brand .sq{width:14px;height:14px;background:var(--mark);border:2px solid var(--ink)}
+  .nav nav{display:flex;gap:4px;margin-left:8px}
+  .nav nav button{font-family:var(--mono);font-size:12.5px;background:none;border:0;cursor:pointer;
+    color:var(--ink-2);padding:8px 12px;border-radius:0;font-weight:700;letter-spacing:-.01em}
+  .nav nav button:hover{color:var(--ink)}
+  .nav nav button.on{color:var(--ink);box-shadow:inset 0 -3px 0 var(--mark)}
+  .nav .spacer{flex:1}
+  .badge{font-family:var(--mono);font-size:11px;font-weight:700;border:2px solid var(--ink);
+    padding:6px 11px;background:var(--mark)}
+
+  .view{display:none;animation:fade .4s ease}
+  .view.on{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  /* hero */
+  .hero{display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center;padding:72px 0 60px}
+  .eyebrow{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--ink-2);margin:0 0 18px;display:flex;align-items:center;gap:8px}
+  .eyebrow .scan{width:8px;height:8px;background:var(--pink);border-radius:50%;animation:blink 1.3s infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+  h1{font-family:var(--display);font-weight:900;font-size:clamp(40px,6.4vw,76px);
+    line-height:.96;letter-spacing:-.035em;margin:0 0 22px;text-transform:none}
+  .lede{font-size:17.5px;color:var(--ink-2);max-width:46ch;margin:0 0 30px;line-height:1.6}
+
+  .search{display:flex;border:2px solid var(--ink);background:var(--card)}
+  .search input{flex:1;border:0;outline:0;font-family:var(--body);font-size:16px;padding:16px;background:transparent;color:var(--ink)}
+  .search input::placeholder{color:#9D9A8C}
+  .btn{font-family:var(--display);font-weight:800;font-size:14px;letter-spacing:.02em;text-transform:uppercase;
+    border:0;border-left:2px solid var(--ink);cursor:pointer;background:var(--mark);color:var(--ink);
+    padding:0 22px;transition:.12s}
+  .btn:hover{background:var(--ink);color:var(--mark)}
+  .sugg{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;align-items:center}
+  .sugg .l{font-family:var(--mono);font-size:11px;color:var(--ink-2)}
+  .chip{font-family:var(--mono);font-size:12px;border:1.5px solid var(--line);background:var(--card);
+    padding:7px 12px;cursor:pointer;color:var(--ink-2);font-weight:700}
+  .chip:hover{border-color:var(--ink);color:var(--ink)}
+
+  /* resume scan visual */
+  .scanviz{background:var(--card);border:2px solid var(--ink);box-shadow:8px 8px 0 var(--ink);
+    padding:26px;position:relative;overflow:hidden}
+  .scanviz::after{content:"";position:absolute;left:0;right:0;height:46px;
+    background:linear-gradient(180deg,rgba(255,61,119,0),rgba(215,242,91,.55),rgba(255,61,119,0));
+    animation:sweep 3.4s ease-in-out infinite;mix-blend-mode:multiply}
+  @keyframes sweep{0%{top:-10%}100%{top:100%}}
+  .scanviz .doc-h{font-family:var(--mono);font-size:11px;color:var(--ink-2);
+    border-bottom:1px dashed var(--line);padding-bottom:10px;margin-bottom:16px;
+    display:flex;justify-content:space-between}
+  .line{height:9px;background:#ECEAE0;border-radius:2px;margin:9px 0}
+  .doc-name{font-family:var(--display);font-weight:800;font-size:19px;margin-bottom:3px}
+  .doc-role{font-family:var(--mono);font-size:12px;color:var(--ink-2);margin-bottom:18px}
+  .doc-kw{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0}
+  .doc-kw span{font-family:var(--mono);font-size:12px;padding:4px 8px;border:1.5px solid var(--ink)}
+  .doc-kw .hit{background:var(--mark)}
+  .doc-kw .miss{border-style:dashed;color:#A7A498;border-color:#C9C6B8}
+
+  /* results */
+  .rhead{padding:42px 0 0;border-bottom:2px solid var(--ink);padding-bottom:24px}
+  .kicker{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--ink-2);margin-bottom:12px}
+  .rhead h2{font-family:var(--display);font-weight:900;font-size:clamp(30px,5vw,48px);
+    letter-spacing:-.03em;margin:0;line-height:1}
+  .rhead .meta{font-family:var(--mono);font-size:12px;color:var(--ink-2);margin-top:14px;
+    display:flex;gap:18px;flex-wrap:wrap}
+
+  .layout{display:grid;grid-template-columns:1.5fr 1fr;gap:0;margin-top:0;border:2px solid var(--ink);border-top:0}
+  .box{padding:28px;border-right:2px solid var(--ink)}
+  .box:last-child{border-right:0;background:#FCFBF6}
+  .box h3{font-family:var(--display);font-weight:800;font-size:16px;margin:0 0 4px;
+    text-transform:uppercase;letter-spacing:-.01em}
+  .box .bs{font-family:var(--mono);font-size:11.5px;color:var(--ink-2);margin:0 0 22px}
+
+  .kw{display:grid;grid-template-columns:24px 1fr auto;align-items:center;gap:14px;
+    padding:12px 0;border-bottom:1.5px dashed var(--line)}
+  .kw:last-child{border-bottom:0}
+  .kw .rk{font-family:var(--mono);font-size:12px;color:#A7A498;font-weight:700}
+  .kw .term{font-family:var(--display);font-weight:700;font-size:17px;letter-spacing:-.01em}
+  .kw .freq{font-family:var(--mono);font-size:12px;color:var(--ink-2);text-align:right}
+  .kw .freq b{font-size:15px;color:var(--ink)}
+  .kw .matchbar{grid-column:2/4;height:6px;background:#ECEAE0;margin-top:2px;overflow:hidden}
+  .kw .matchbar i{display:block;height:100%;background:var(--ink);transform-origin:left;
+    animation:grow 1s cubic-bezier(.2,.8,.2,1) both}
+  @keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+
+  .meter{text-align:center;margin-bottom:24px}
+  .meter .big{font-family:var(--display);font-weight:900;font-size:64px;line-height:1;letter-spacing:-.04em}
+  .meter .big small{font-size:24px}
+  .meter .lab{font-family:var(--mono);font-size:11.5px;color:var(--ink-2);margin-top:4px}
+  .gauge{height:14px;background:#ECEAE0;border:2px solid var(--ink);margin:18px 0 8px;overflow:hidden}
+  .gauge i{display:block;height:100%;background:var(--mark)}
+  .missing{margin-top:22px}
+  .missing .h{font-family:var(--mono);font-size:11.5px;font-weight:700;color:var(--pink);margin-bottom:10px}
+  .missing .chips{display:flex;flex-wrap:wrap;gap:7px}
+  .missing .chips span{font-family:var(--mono);font-size:12px;border:1.5px dashed var(--pink);
+    color:var(--ink);padding:5px 9px;background:var(--pink-soft)}
+
+  .cta-row{display:flex;justify-content:center;margin-top:30px}
+  .btn2{font-family:var(--display);font-weight:800;text-transform:uppercase;font-size:14px;
+    border:2px solid var(--ink);background:var(--ink);color:var(--mark);padding:14px 26px;cursor:pointer;
+    box-shadow:5px 5px 0 var(--mark);transition:.12s}
+  .btn2:hover{transform:translate(-2px,-2px);box-shadow:7px 7px 0 var(--mark)}
+
+  /* projects */
+  .phead{padding:44px 0 0}
+  .phead h2{font-family:var(--display);font-weight:900;font-size:clamp(30px,5vw,48px);
+    letter-spacing:-.03em;margin:0 0 14px;line-height:1}
+  .phead p{color:var(--ink-2);max-width:60ch;margin:0;font-size:16px}
+  .source{font-family:var(--mono);font-size:12px;margin:20px 0 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .source .l{color:var(--ink-2)}
+  .source span{border:1.5px solid var(--ink);padding:5px 9px;background:var(--card);font-weight:700}
+
+  .pjs{display:grid;grid-template-columns:1fr 1fr;gap:0;border:2px solid var(--ink);margin-top:28px}
+  .pj{padding:28px;border-right:2px solid var(--ink);border-bottom:2px solid var(--ink);
+    background:var(--card);transition:.14s}
+  .pj:nth-child(2n){border-right:0}
+  .pj:nth-last-child(-n+2){border-bottom:0}
+  .pj:hover{background:#FCFBF6}
+  .pj .tag{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;
+    font-weight:700;color:var(--ink-2);margin-bottom:14px}
+  .pj .tag .lv{color:var(--ink);background:var(--mark);padding:3px 7px}
+  .pj h4{font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:-.02em;margin:0 0 10px}
+  .pj p{font-size:14px;color:var(--ink-2);margin:0 0 18px}
+  .earn{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink-2);margin-bottom:9px}
+  .kws{display:flex;gap:7px;flex-wrap:wrap}
+  .kws span{font-family:var(--mono);font-size:12px;padding:5px 9px;border:1.5px solid var(--ink);background:var(--mark)}
+
+  footer{margin-top:0;border-top:2px solid var(--ink)}
+  footer .row{display:flex;justify-content:space-between;align-items:center;padding:24px 0;
+    font-family:var(--mono);font-size:12px;color:var(--ink-2);flex-wrap:wrap;gap:10px}
+
+  @media(max-width:860px){
+    .hero{grid-template-columns:1fr;gap:34px}
+    .layout,.pjs{grid-template-columns:1fr}
+    .box{border-right:0;border-bottom:2px solid var(--ink)}
+    .box:last-child{border-bottom:0}
+    .pj{border-right:0}
+    .pj:nth-last-child(-n+2):not(:last-child){border-bottom:2px solid var(--ink)}
+    .nav nav{display:none}
+  }
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <div class="wrap row">
+    <div class="brand"><span class="sq"></span>KEYWORD</div>
+    <nav>
+      <button class="on" onclick="go('home',this)">SCAN</button>
+      <button onclick="go('results',this)">REPORT + PROJECTS</button>
+    </nav>
+    <div class="spacer"></div>
+    <span class="badge">BEAT THE ATS</span>
+  </div>
+</div>
+
+<!-- HOME -->
+<section id="home" class="view on">
+  <div class="wrap hero">
+    <div>
+      <p class="eyebrow"><span class="scan"></span>Reverse-engineer the applicant tracking system</p>
+      <h1>The bots read <span class="mk">keywords</span>. Now so can you.</h1>
+      <p class="lede">Before a human sees your résumé, software ranks it on the keywords it contains. Search a role and we'll show you the exact terms employers are screening for — pulled live from real postings — and how to put them on your résumé honestly.</p>
+      <div class="search">
+        <input id="q" placeholder="Enter a job title to scan…" value="Frontend Developer" />
+        <button class="btn" onclick="run()">Scan ▸</button>
+      </div>
+      <div class="sugg">
+        <span class="l">TRY:</span>
+        <button class="chip" onclick="pick('Frontend Developer')">Frontend Developer</button>
+        <button class="chip" onclick="pick('Data Engineer')">Data Engineer</button>
+        <button class="chip" onclick="pick('QA Engineer')">QA Engineer</button>
+      </div>
+    </div>
+
+    <div class="scanviz">
+      <div class="doc-h"><span>RESUME.PDF</span><span>ATS SCAN ··· 73% MATCH</span></div>
+      <div class="doc-name">Your Name</div>
+      <div class="doc-role">Aspiring Frontend Developer</div>
+      <div class="line" style="width:90%"></div>
+      <div class="line" style="width:70%"></div>
+      <div class="doc-kw">
+        <span class="hit">React</span><span class="hit">JavaScript</span><span class="hit">CSS</span>
+        <span class="hit">HTML</span><span class="miss">TypeScript</span><span class="miss">Next.js</span>
+      </div>
+      <div class="line" style="width:80%"></div>
+      <div class="line" style="width:55%"></div>
+    </div>
+  </div>
+</section>
+
+<!-- RESULTS -->
+<section id="results" class="view">
+  <div class="wrap">
+    <div class="rhead">
+      <div class="kicker">KEYWORD REPORT // FRONTEND DEVELOPER</div>
+      <h2>The terms the bots are<br>scanning for.</h2>
+      <div class="meta"><span>SOURCE: 1,206 live postings</span><span>REGION: USA</span><span>WINDOW: 30 days</span></div>
+    </div>
+    <div class="layout">
+      <div class="box">
+        <h3>Top 10 screened keywords</h3>
+        <p class="bs">% = share of postings that list the term · longer bar = appears more often</p>
+        <div id="kwlist"></div>
+      </div>
+      <div class="box">
+        <h3>Your match score</h3>
+        <p class="bs">Based on a sample junior résumé</p>
+        <div class="meter">
+          <div class="big">73<small>%</small></div>
+          <div class="lab">7 of 10 keywords present</div>
+        </div>
+        <div class="gauge"><i style="width:73%"></i></div>
+        <div class="missing">
+          <div class="h">▸ MISSING — ADD THESE TO RANK HIGHER</div>
+          <div class="chips"><span>TypeScript</span><span>Next.js</span><span>Testing</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="phead" id="pj-anchor" style="padding-top:44px">
+      <h2 style="font-size:28px">Projects to build</h2>
+      <p style="margin:8px 0 0">Each ships you 2–3 of the top five screened keywords, sized for a student.</p>
+      <div class="source">
+        <span class="l">FROM TOP 5:</span>
+        <span>React</span><span>TypeScript</span><span>JavaScript</span><span>CSS</span><span>HTML</span>
+      </div>
+    </div>
+    <div class="pjs" id="pjs"></div>
+  </div>
+  <footer><div class="wrap row">
+    <div>KEYWORD · DESIGN 3 — ATS-DECODER DIRECTION</div>
+    <div>BEAT THE BOTS ◆ PROVE THE SKILLS</div>
+  </div></footer>
+</section>
+
+<script>
+  const kws=[
+    ['React',87],['TypeScript',79],['JavaScript',74],['CSS / SCSS',68],['HTML',61],
+    ['Next.js',54],['Git',49],['REST APIs',43],['Tailwind CSS',38],['Testing (Jest)',31]
+  ];
+  function buildKw(){
+    document.getElementById('kwlist').innerHTML = kws.map((k,i)=>`
+      <div class="kw">
+        <div class="rk">${String(i+1).padStart(2,'0')}</div>
+        <div class="term">${k[0]}</div>
+        <div class="freq"><b>${k[1]}%</b></div>
+        <div class="matchbar"><i style="width:${k[1]}%;animation-delay:${i*55}ms"></i></div>
+      </div>`).join('');
+  }
+  const proj=[
+    ['BEGINNER','MARKDOWN NOTES APP','A live-preview note editor that saves locally. Small, finishable, and a clean first repo to point recruiters at.',['React','TypeScript','HTML']],
+    ['BEGINNER','FINANCE DASHBOARD','Track spending and chart it by category — proves you can turn data into a usable interface.',['React','TypeScript','CSS']],
+    ['INTERMEDIATE','RECIPE FINDER PWA','Search a public API, filter, and save favorites. Installable on mobile to show modern-web fluency.',['React','JavaScript','CSS']],
+    ['INTERMEDIATE','COMPONENT LIBRARY','Documented, reusable buttons and inputs — the exact work teams hand to junior frontends.',['React','TypeScript','CSS']]
+  ];
+  function buildPj(){
+    document.getElementById('pjs').innerHTML = proj.map((p,i)=>`
+      <div class="pj">
+        <div class="tag"><span class="lv">${p[0]}</span><span>PROJECT ${String(i+1).padStart(2,'0')}</span></div>
+        <h4>${p[1]}</h4>
+        <p>${p[2]}</p>
+        <div class="earn">▸ EARNS THESE KEYWORDS</div>
+        <div class="kws">${p[3].map(s=>`<span>${s}</span>`).join('')}</div>
+      </div>`).join('');
+  }
+  buildKw(); buildPj();
+
+  const navButtons=document.querySelectorAll('.nav nav button');
+  function navBtn(i){return navButtons[i];}
+  function go(id,btn){
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+    document.getElementById(id).classList.add('on');
+    if(btn){navButtons.forEach(b=>b.classList.remove('on'));btn.classList.add('on');}
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  function run(){go('results',navBtn(1));}
+  function scrollToEl(id){document.getElementById(id).scrollIntoView({behavior:'smooth',block:'start'});}
+  function pick(v){document.getElementById('q').value=v;}
+</script>
+</body>
+</html>
