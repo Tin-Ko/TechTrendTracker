@@ -78,7 +78,7 @@ def upsert_project(cur, triple: TripleStat, title: str, level: str, blurb: str) 
 
 
 def build(*, min_support: int, min_lift: float, top_n: int, max_skills: int) -> None:
-    dsn = os.environ.get("SUPABASE_DB_URL")
+    dsn = os.environ.get("SUPABASE_DB_DIRECT_URL")
     if not dsn:
         raise SystemExit("SUPABASE_DB_URL not set (use the direct 5432 string for this batch job)")
 
