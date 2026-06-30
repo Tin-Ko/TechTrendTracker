@@ -31,3 +31,5 @@ backend/.bin/
 
 # TypeScript incremental build cache (generated)
 frontend/tsconfig.tsbuildinfo
+
+claude.md

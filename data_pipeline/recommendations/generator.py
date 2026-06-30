@@ -16,7 +16,7 @@ import ollama
 
 
 # Same default tag as the ingest worker (data_pipeline/llm_processor/processor.py).
-LLM_MODEL = os.environ.get("LLM_MODEL", "gemma3:latest")
+LLM_MODEL = os.environ.get("LLM_MODEL", "gemma4:latest")
 
 _LEVELS = {"BEGINNER", "INTERMEDIATE", "ADVANCED"}
 
