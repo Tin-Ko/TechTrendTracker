@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import NavBar from "../components/NavBar";
 import SearchBar from "../components/SearchBar";
 
-const SUGGESTIONS = ["Frontend Developer", "Data Engineer", "DevOps Engineer"];
+const SUGGESTIONS = ["Software Engineer", "Data Scientist"];
 
 // A static teaser of what a real report looks like — purely illustrative.
 const PREVIEW = [

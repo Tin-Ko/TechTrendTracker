@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 
 type Variant = "hero" | "compact";
@@ -11,6 +11,12 @@ type Props = {
 export default function SearchBar({ initialValue = "", variant = "hero" }: Props) {
   const [value, setValue] = useState(initialValue);
   const navigate = useNavigate();
+
+  // Keep the input in sync when the job title in the URL changes (e.g. the user
+  // clicks a related role while already on the report page).
+  useEffect(() => {
+    setValue(initialValue);
+  }, [initialValue]);
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
