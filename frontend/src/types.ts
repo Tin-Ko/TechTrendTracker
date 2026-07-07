@@ -6,6 +6,15 @@ export type Skill = {
   Percentage: number;
 };
 
+// Hierarchical search (§9.3): how the backend matched this query. Null until
+// the structured path is live server-side.
+export type ResolvedInfo = {
+  CanonicalTitle: string;
+  RoleFamily: string;
+  Specializations: string[] | null;
+  MatchMode: string; // "structured" | "fallback"
+};
+
 export type SkillsResponse = {
   JobTitle: string;
   JobCount: number;
@@ -13,6 +22,7 @@ export type SkillsResponse = {
   AllSkills: string[] | null;
   Skills: Skill[] | null;
   RelatedTitles: string[] | null;
+  Resolved: ResolvedInfo | null;
 };
 
 // Matches backend/services/recommend_service.go.

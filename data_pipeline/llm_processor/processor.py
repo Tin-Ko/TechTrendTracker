@@ -45,6 +45,17 @@ class Processor:
         self.embedder = TitleEmbedder()
         self.db = SupabaseClient()
 
+        # TODO(hierarchical search §6.4) 1. What to do:
+        #    Construct the title normalizer alongside the extractor:
+        #        self.title_normalizer = TitleNormalizer(db=self.db, model=LLM_MODEL)
+        # TODO 2. Recommended approach:
+        #    Import TitleNormalizer at the top of this file next to the
+        #    Extractor import. Build it AFTER self.db exists (it needs the
+        #    connection).
+        # TODO 3. Implementation details:
+        #    - Reuse the same LLM_MODEL constant this module already reads
+        #      from the environment — one env var controls both Gemma uses.
+
         self.connection = pika.BlockingConnection(
             pika.ConnectionParameters(host=RABBITMQ_HOST)
         )
@@ -82,6 +93,26 @@ class Processor:
 
         seniority, posting_year = parse_facets(job_title, posted_date)
         embedding = self.embedder.embed(job_title)
+
+        # TODO(hierarchical search §6.4) 1. What to do:
+        #    Resolve the title decision here, after facet parsing and before
+        #    the insert:
+        #        decision = self.title_normalizer.get_or_create_title_decision(job_title)
+        #    then pass canonical_title=decision.canonical_title,
+        #    role_family=decision.role_family,
+        #    specializations=list(decision.specializations) into
+        #    insert_posting below.
+        # TODO 2. Recommended approach:
+        #    Keep the ORDER above deliberate: parse_facets must keep running
+        #    on the RAW title (seniority/year live there and are stripped
+        #    from the normalized key — §5.1 "seniority stays a facet").
+        # TODO 3. Implementation details:
+        #    - No try/except needed here: get_or_create_title_decision never
+        #      raises by contract; on any failure it returns an abstention
+        #      and the posting inserts unmapped.
+        #    - Nice-to-have for the shadow phase (§11 phase 1): include
+        #      decision.role_family in the print() below so you can watch
+        #      decisions stream by in the worker log.
 
         pid, inserted = self.db.insert_posting(
             posting_id=posting_id,

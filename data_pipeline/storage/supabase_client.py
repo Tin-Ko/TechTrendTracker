@@ -13,6 +13,22 @@ from typing import Iterable, Optional, Sequence
 import psycopg
 
 
+# TODO(hierarchical search §6.4) 1. What to do:
+#    Add the three derived title columns to this INSERT: canonical_title,
+#    role_family, specializations (and three more %s placeholders).
+# TODO 2. Recommended approach:
+#    Extend insert_posting() below with three keyword-only params
+#    (canonical_title: Optional[str], role_family: Optional[str],
+#    specializations: Optional[list[str]]) defaulting to None/None/None,
+#    and append them to the execute() tuple in the same order as the
+#    column list. Defaults keep older callers/tests working unchanged.
+# TODO 3. Implementation details:
+#    - psycopg adapts a Python list to TEXT[] natively — pass the list
+#      straight through, no _vector_literal-style formatting needed.
+#    - For specializations pass `list(specs) if specs else []` — the column
+#      is NOT NULL DEFAULT '{}', so never send None for it.
+#    - Keep ON CONFLICT DO NOTHING untouched: dedup semantics are not this
+#      feature's business.
 _INSERT_SQL = """
     INSERT INTO job_postings (
         posting_id, job_title, company, skills, seniority,

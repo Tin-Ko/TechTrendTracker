@@ -6,6 +6,7 @@ Cron-driven, one-shot — exits when the Scrapy crawl finishes.
 """
 
 import os
+from urllib.parse import quote
 
 import pika
 import scrapy
@@ -15,6 +16,11 @@ from scrapy.utils.project import get_project_settings
 
 RABBITMQ_HOST = os.environ.get("RABBITMQ_HOST", "localhost")
 URLS_QUEUE = "urls_queue"
+
+# Job title(s) to harvest. Set via the JOB_KEYWORDS env var (harvest.sh does
+# this); comma-separate to scrape several titles in one run. Titles are plain
+# text here — URL-encoding for the LinkedIn query string happens below.
+JOB_KEYWORDS = os.environ.get("JOB_KEYWORDS", "Data Scientist")
 
 
 class LinkedInJobSpider(scrapy.Spider):
@@ -34,7 +40,9 @@ class LinkedInJobSpider(scrapy.Spider):
     f_TPR = "r604800"
     geoID = "102095887"
     keywords = [
-        "Data%20Scientist",
+        quote(title.strip())
+        for title in JOB_KEYWORDS.split(",")
+        if title.strip()
     ]
     origin = "JOB_SEARCH_PAGE_SEARCH_BUTTON"
     start_urls = []

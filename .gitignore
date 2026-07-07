@@ -33,3 +33,4 @@ backend/.bin/
 frontend/tsconfig.tsbuildinfo
 
 claude.md
+package-lock.json

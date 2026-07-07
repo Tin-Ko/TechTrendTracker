@@ -1,0 +1,39 @@
+[
+  {
+    "_readme": "Behavioral golden set (design §10.2) — this file encodes the WHOLE POINT of hierarchical search: asymmetric net width. Run via scripts/run_golden_queries.py against a dev DB after backfill. Fields: query; expect_includes / expect_excludes = canonical titles asserted against the response's RelatedTitles + Resolved block; expect_resolves_to = asserted against Resolved.CanonicalTitle; expect_same_results_as = assert full result-set equality with that query; expect_seniority = asserted against the applied facet. TODO(you): grow this to ~30 cases as the taxonomy fills in — every bug you fix by hand should land here as a case first."
+  },
+  {
+    "query": "software engineer",
+    "expect_includes": ["backend engineer", "frontend engineer", "fullstack engineer", "software engineer"],
+    "expect_excludes": ["data scientist"],
+    "_note": "WIDE net: the generic family query pulls in every specialization"
+  },
+  {
+    "query": "backend engineer",
+    "expect_includes": ["backend engineer"],
+    "expect_excludes": ["software engineer", "frontend engineer"],
+    "_note": "NARROW net — the heart of the feature: generic 'software engineer' postings have specs={} which does NOT contain {backend}, so they are EXCLUDED. No symmetric-similarity system can pass this case."
+  },
+  {
+    "query": "backend software engineer",
+    "expect_same_results_as": "backend engineer",
+    "_note": "equivalence: identical plan → assert full result-set equality, not just overlap"
+  },
+  {
+    "query": "bakend engneer",
+    "expect_resolves_to": "backend engineer",
+    "_note": "typo tolerance via fuzzy match on title_map keys (§9.1 step 2) — must clear fuzzyAcceptFloor"
+  },
+  {
+    "query": "senior backend engineer",
+    "expect_resolves_to": "backend engineer",
+    "expect_seniority": "senior",
+    "_note": "seniority is a FACET, not title identity: same plan as 'backend engineer' plus the seniority filter"
+  },
+  {
+    "query": "ml engineer",
+    "expect_includes": ["machine learning engineer"],
+    "expect_excludes": ["software engineer"],
+    "_note": "MLE is its own family (§5.2 policy) — a 'software engineer' search means generalist SWE, not MLE"
+  }
+]
