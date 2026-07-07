@@ -3,8 +3,16 @@
 # the content_worker (started by ./run.sh) consumes them.
 # Safe to schedule via cron:
 #   0 2 * * * /path/to/TechTrendTracker/harvest.sh >> /var/log/ttt/harvest.log 2>&1
+#
+# Job title to scrape: edit JOB_TITLE below, or pass it as an argument:
+#   ./harvest.sh "Machine Learning Engineer"
+# Comma-separate to harvest several titles in one run:
+#   ./harvest.sh "Data Scientist, Backend Engineer"
 
 set -euo pipefail
+
+# The job title(s) to harvest. A command-line argument overrides this default.
+JOB_TITLE="Data Scientist"
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$REPO_ROOT"
@@ -27,5 +35,11 @@ fi
 
 PYBIN="$REPO_ROOT/.venv/bin/python"
 [[ -x "$PYBIN" ]] || { echo "$PYBIN not found" >&2; exit 1; }
+
+# A CLI argument (if given) overrides the JOB_TITLE default above. The spider
+# reads JOB_KEYWORDS and URL-encodes it, so pass a plain title here.
+JOB_KEYWORDS="${1:-$JOB_TITLE}"
+export JOB_KEYWORDS
+echo "harvesting job title(s): $JOB_KEYWORDS" >&2
 
 exec "$PYBIN" -m data_pipeline.scraper.linkedin

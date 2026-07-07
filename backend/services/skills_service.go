@@ -16,6 +16,19 @@ type SkillsResponse struct {
 	AllSkills     []string
 	Skills        []Skill
 	RelatedTitles []string
+	// Resolved explains HOW this query was matched (design §9.3): nil until
+	// hierarchical search is wired in. Frontend renders it as the optional
+	// "Showing: backend engineer · family: software engineer" caption.
+	Resolved *ResolvedInfo
+}
+
+// ResolvedInfo is the §9.3 response block. Populate from the QueryPlan in
+// GetTopSkills once the structured path is live.
+type ResolvedInfo struct {
+	CanonicalTitle  string
+	RoleFamily      string
+	Specializations []string
+	MatchMode       string // "structured" | "fallback"
 }
 
 type Skill struct {
@@ -113,6 +126,96 @@ func buildMatchedCTE() string {
 	return r.Replace(matchedCTETemplate)
 }
 
+// ── Hierarchical search: structured retrieval (design §9.2) ─────────────────
+//
+// Threshold philosophy shift, on purpose: the structured arm has NO relevance
+// floor at all — membership is decided by the title map, not by an
+// uncalibrated similarity score. The 0.80 blended floor only survives inside
+// the legacy fallback CTE above.
+const (
+	// unmappedSemanticFloor gates the recall patch: postings the LLM
+	// abstained on are rescued only when embedding-similar to the query.
+	// This pool shrinks toward empty as taxonomy coverage → 100%.
+	unmappedSemanticFloor = 0.86
+	unmappedPoolSize      = 200
+)
+
+// structuredMatchedCTETemplate is the asymmetric-rule matched set (§3, §9.2).
+// Bind vars at query time:
+//   $1 role_family        $2 specializations (text[], via pq.Array)
+//   $3 seniority filter   $4 year floor       $5 query vector literal
+const structuredMatchedCTETemplate = `
+WITH matched AS (
+    -- primary: the asymmetric rule, pure index hits.
+    -- specializations @> $2 means: every QUERY spec must be present on the
+    -- posting; posting extras never disqualify (§3 containment direction).
+    SELECT posting_id, job_title, canonical_title, skills
+    FROM job_postings
+    WHERE role_family = $1
+      AND specializations @> $2::text[]
+      AND ($3::text IS NULL OR seniority = $3 OR seniority = 'unknown')
+      AND ($4::int  IS NULL OR posting_year >= $4)
+
+    UNION ALL
+
+    -- recall patch: postings the LLM couldn't place, rescued by embedding
+    -- similarity so abstentions never 404 (§5.1, §12).
+    SELECT posting_id, job_title, canonical_title, skills
+    FROM job_postings
+    WHERE role_family IS NULL
+      AND ($3::text IS NULL OR seniority = $3 OR seniority = 'unknown')
+      AND ($4::int  IS NULL OR posting_year >= $4)
+      AND 1 - (title_embedding <=> $5::vector) > {{UNMAPPED_FLOOR}}
+    ORDER BY title_embedding <=> $5::vector
+    LIMIT {{UNMAPPED_POOL}}
+)`
+
+func buildStructuredMatchedCTE() string {
+	// TODO 1. What to do:
+	//    Substitute {{UNMAPPED_FLOOR}} and {{UNMAPPED_POOL}} into
+	//    structuredMatchedCTETemplate and return the SQL.
+	//
+	// TODO 2. Recommended approach:
+	//    Mirror buildMatchedCTE above verbatim: strings.NewReplacer +
+	//    strconv.FormatFloat/Itoa. Same trick for the same reason — the
+	//    template contains the `@>` and `%`-family operators, which
+	//    fmt.Sprintf would mangle as format verbs.
+	//
+	// TODO 3. Implementation details:
+	//    - 'f' format with 4 decimals for the float, matching the sibling.
+	return "" // TODO: stub
+}
+
+// fetchRelatedTitlesStructured replaces fetchRelatedTitles on the structured
+// path (§9.2): grouping by canonical_title turns near-duplicate raw strings
+// ("Sr. Backend Engineer", "Backend Engineer (Remote)") into clean canonical
+// names with meaningful counts.
+func fetchRelatedTitlesStructured(ctx context.Context, plan QueryPlan, queryVec string, seniority *string, year *int) ([]string, error) {
+	// TODO 1. What to do:
+	//    buildStructuredMatchedCTE() + `
+	//    SELECT COALESCE(canonical_title, job_title) AS t
+	//    FROM matched
+	//    GROUP BY t
+	//    ORDER BY COUNT(*) DESC
+	//    LIMIT 8;`
+	//    (COALESCE because recall-patch rows may have NULL canonical_title.)
+	//
+	// TODO 2. Recommended approach:
+	//    Copy the row-scanning shape of fetchRelatedTitles below. Bind args
+	//    in template order: plan.Decision.Family, pq.Array(plan.Decision.Specs),
+	//    seniority, year, queryVec. pq is "github.com/lib/pq" — already in
+	//    go.mod; add the import when you first use it.
+	//
+	// TODO 3. Implementation details:
+	//    - pq.Array(nil) sends NULL, not '{}' — always pass a non-nil slice
+	//      (an empty []string{} is the correct "no specs" value, and
+	//      `x @> '{}'` is true for every row, which is exactly the wide-net
+	//      semantics for generic queries like "software engineer").
+	//    - Canonicals are stored lowercase; title-case them for display in
+	//      the handler or frontend (§9.2 says display-side, not SQL).
+	return nil, nil // TODO: stub
+}
+
 // GetTopSkills runs the hybrid query: ANN preselect -> trigram blend ->
 // threshold -> unnest+GROUP BY for the top skills, plus all-skills and
 // related-titles lookups against the same matched set.
@@ -120,6 +223,36 @@ func GetTopSkills(jobTitle string) (SkillsResponse, error) {
 	if jobTitle == "" {
 		return SkillsResponse{}, fmt.Errorf("missing job title")
 	}
+
+	// TODO(hierarchical search §9.2) 1. What to do:
+	//    Turn this function into the mode branch:
+	//      plan := ResolveQuery(jobTitle)
+	//      - still embed the query ONCE (the vector is needed by BOTH arms:
+	//        recall patch on structured, semantic pool on fallback);
+	//      - if plan.Mode == ModeStructured: run the SAME aggregation SQL
+	//        bodies below but prefixed with buildStructuredMatchedCTE() and
+	//        bound with (plan.Decision.Family, pq.Array(plan.Decision.Specs),
+	//        seniorityFilter, facets.Year, queryVec); use
+	//        fetchRelatedTitlesStructured for related titles;
+	//      - else: exactly the code below, unchanged (legacy arm, kept
+	//        verbatim as the §11 fallback — do not delete or "improve" it);
+	//      - either way fill resp.Resolved from the plan.
+	// TODO 2. Recommended approach:
+	//    - Use plan.Facets instead of re-running ParseFacets below —
+	//      ResolveQuery already parsed them; one facts source per request.
+	//    - Gate the branch behind SEARCH_MODE (legacy|structured|auto,
+	//      default legacy — §11 phase 4): read the env var once at package
+	//      init; "auto" means structured-when-resolved, i.e. plan.Mode
+	//      already encodes it, so "legacy" simply forces the else-arm.
+	//    - The downstream aggregation SQL (top-10, all-skills) only reads
+	//      FROM matched — it works untouched on top of either CTE. That
+	//      was the point of the CTE seam.
+	// TODO 3. Implementation details:
+	//    - The two arms take different bind args ($1..$5 mean different
+	//      things) — build one args []interface{} per arm next to its CTE
+	//      choice; do not try to share the slice.
+	//    - Log the §9.3 line here: mode=..., key=... (slog/log.Printf) —
+	//      fallback-rate is the feature's health metric.
 
 	embedder, err := GetEmbedService()
 	if err != nil {

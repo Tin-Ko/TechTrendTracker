@@ -1,0 +1,162 @@
+[
+  {
+    "raw": "Software Engineer",
+    "key": "software engineer",
+    "_note": "baseline no-op"
+  },
+  {
+    "raw": "SOFTWARE ENGINEER",
+    "key": "software engineer",
+    "_note": "step 1: lowercase"
+  },
+  {
+    "raw": "Software   Engineer",
+    "key": "software engineer",
+    "_note": "step 6: collapse repeated whitespace"
+  },
+  {
+    "raw": "Senior Software Engineer",
+    "key": "software engineer",
+    "_note": "step 4: strip 'senior'"
+  },
+  {
+    "raw": "Sr. Software Engineer",
+    "key": "software engineer",
+    "_note": "step 4: 'sr' must be in seniority regex; step 6 removes the '.'"
+  },
+  {
+    "raw": "Junior Backend Engineer",
+    "key": "backend engineer",
+    "_note": "step 4: strip 'junior'"
+  },
+  {
+    "raw": "Staff Software Engineer",
+    "key": "software engineer",
+    "_note": "step 4: strip 'staff'"
+  },
+  {
+    "raw": "Principal Engineer",
+    "key": "engineer",
+    "_note": "thin key is fine; the LLM/title_map maps 'engineer' to a canonical"
+  },
+  {
+    "raw": "Software Engineer II",
+    "key": "software engineer",
+    "_note": "ASSUMPTION: roman-numeral level suffix stripped as seniority. Verify your regex covers I/II/III, else key would be 'software engineer ii'"
+  },
+  {
+    "raw": "New Grad Software Engineer",
+    "key": "software engineer",
+    "_note": "CRITICAL: 'new grad' is NOT bracketed here, so ONLY the seniority regex saves it. If your regex misses it you'll get 'new grad software engineer' as its own bogus key. Verify 'new grad', 'new graduate', 'newgrad' are covered."
+  },
+  {
+    "raw": "Software Engineer (New Grad)",
+    "key": "software engineer",
+    "_note": "gone either way (bracket strip OR seniority). Safe ONLY because parse_facets runs on the RAW title first and captures 'new grad' into the seniority facet before the key drops it."
+  },
+  {
+    "raw": "Entry Level Data Analyst",
+    "key": "data analyst",
+    "_note": "step 4: 'entry level' (and 'entry-level') in seniority regex"
+  },
+  {
+    "raw": "Software Engineer (Remote)",
+    "key": "software engineer",
+    "_note": "step 2: bracket noise with no home column -> deleted"
+  },
+  {
+    "raw": "Backend Engineer (Hybrid - NYC)",
+    "key": "backend engineer",
+    "_note": "step 2: whole bracket (incl. its internal hyphen) removed before step 6 ever sees it"
+  },
+  {
+    "raw": "Data Scientist [Contract]",
+    "key": "data scientist",
+    "_note": "step 2: square brackets too"
+  },
+  {
+    "raw": "Software Engineer (f/m/d)",
+    "key": "software engineer",
+    "_note": "step 2 precedes step 6, so the '/' inside the bracket is deleted with the bracket and never triggers the keep-'/' rule"
+  },
+  {
+    "raw": "Frontend Engineer | Google",
+    "key": "frontend engineer",
+    "_note": "step 3: truncate at first '|'"
+  },
+  {
+    "raw": "Data Engineer | Remote | $150k",
+    "key": "data engineer",
+    "_note": "step 3: everything from the first '|' onward is dropped"
+  },
+  {
+    "raw": "Software Engineer 2026",
+    "key": "software engineer",
+    "_note": "step 5: strip 20xx year token"
+  },
+  {
+    "raw": "2025 New Grad Software Engineer",
+    "key": "software engineer",
+    "_note": "year AND seniority both stripped"
+  },
+  {
+    "raw": "Software Engineer, Backend (Remote) - 2026 Start",
+    "key": "software engineer backend start",
+    "_note": "REFINEMENT: after removing bracket + year + comma, a dangling ' - ' separator remains. This key assumes hyphens are kept ONLY between word chars (intra-word), and standalone separators are dropped. Naive keep-all-hyphens would instead give 'software engineer backend - start'. Pick one and make Go match."
+  },
+  {
+    "raw": "Software Engineer, Backend",
+    "key": "software engineer backend",
+    "_note": "step 6: comma removed (not in keep-set)"
+  },
+  {
+    "raw": "C++ Engineer",
+    "key": "c++ engineer",
+    "_note": "step 6: '+' is in the keep-set, must survive"
+  },
+  {
+    "raw": "C# Developer",
+    "key": "c# developer",
+    "_note": "DECISION: '#' is NOT in the default keep-set {& + / -}. As written literally this becomes 'c developer'. If you care about C#/.NET titles, add '#' to the keep-set. This fixture assumes you did."
+  },
+  {
+    "raw": "ML/AI Engineer",
+    "key": "ml/ai engineer",
+    "_note": "step 6: '/' kept. Note 'ml' and 'ai' are NOT expanded — this function is mechanical; the title_map maps the abbreviation to a canonical."
+  },
+  {
+    "raw": "Research & Development Engineer",
+    "key": "research & development engineer",
+    "_note": "step 6: '&' kept"
+  },
+  {
+    "raw": "Front-End Developer",
+    "key": "front-end developer",
+    "_note": "intra-word hyphen kept. Different key from 'Backend Developer' on purpose — both LLM-map to the same canonical, the key only needs to be STABLE, not pre-merged."
+  },
+  {
+    "raw": "Node.js Developer",
+    "key": "node js developer",
+    "_note": "step 6: '.' removed, joining the token to 'nodejs'"
+  },
+  {
+    "raw": "Backend Software Engineer",
+    "key": "backend software engineer",
+    "_note": "no reduction here; canonicalization to 'backend engineer' happens in validate_decision (head-noun map), NOT in this function"
+  },
+  {
+    "raw": "\ud83d\udc68\u200d\ud83d\udcbb Software Engineer \ud83d\ude80",
+    "key": "software engineer",
+    "_note": "ASSUMPTION: emoji/symbols stripped by step 6. Confirm your punctuation regex removes non-ASCII symbols, or add an explicit symbol-strip."
+  },
+  {
+    "raw": "",
+    "key": "",
+    "_note": "degenerate: empty input -> empty key. Caller (get_or_create_title_decision) should treat empty key as an immediate abstention."
+  },
+  {
+    "raw": "   ",
+    "key": "",
+    "_note": "degenerate: whitespace-only -> empty after trim"
+  }
+]

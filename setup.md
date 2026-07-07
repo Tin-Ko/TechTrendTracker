@@ -252,6 +252,7 @@ Fill it in:
 | Var | Example | Notes |
 |---|---|---|
 | `SUPABASE_DB_URL` | `postgresql://postgres.<ref>:<pwd>@aws-0-<region>.pooler.supabase.com:6543/postgres` | Pooled for Cloud Run; direct (5432) is fine locally |
+| `SUPABASE_DB_DIRECT_URL` | `postgresql://postgres.<ref>:<pwd>@aws-0-<region>.pooler.supabase.com:5432/postgres` | Direct (5432) DSN. Only the recommendations catalog batch job (§11.3) reads this; unset otherwise |
 | `ONNX_MODEL_DIR` | `./models/bge-small-en-v1.5` | Must contain `model.onnx` + `tokenizer.json` |
 | `ONNX_LIBRARY_PATH` | `/usr/local/lib/libonnxruntime.so` | hugot defaults to `onnxruntime.so` (no `lib` prefix) and will fail to load; set this explicitly |
 | `JOB_POSTINGS_DIR` | `/job_postings` | Raw scrape archive |
@@ -311,21 +312,47 @@ pooling/normalization difference — do not proceed.
 Two scripts at the repo root do all the lifecycle work:
 
 - **`./run.sh`** — pre-flight checks, brings up RabbitMQ via Docker, then
-  launches the three long-running services (extraction worker, content
-  worker, Go backend) in the background with logs going to `logs/`.
-  Stays in the foreground; `Ctrl-C` tears every worker down. Leaves the
-  RabbitMQ container running (run `docker compose down` to stop it too).
-- **`./harvest.sh`** — one-shot LinkedIn link harvest. Publishes URLs to
-  `urls_queue`; the content worker consumes them. Cron-friendly.
+  launches the four long-running services (extraction worker, content
+  worker, Go backend, Vite frontend) in the background with logs going to
+  `logs/`. Stays in the foreground; `Ctrl-C` tears every worker down.
+  Leaves the RabbitMQ container running (run `docker compose down` to stop
+  it too). Flags: `--follow <name>` / `--no-follow` (which log to stream),
+  `--scrape-only` (ingest only, no backend/frontend), `--purge` (wipe the
+  queues at startup), `--generate-projects` (one-shot recommendations build,
+  then exit — §11.3). See §11.1.
+- **`./harvest.sh [title]`** — one-shot LinkedIn link harvest for a job
+  title. Publishes URLs to `urls_queue`; the content worker consumes them.
+  Title comes from the argument, or the `JOB_TITLE` default in the script.
+  Cron-friendly. See §11.2.
 
 ### 11.1 Start the stack
 
 ```bash
-./run.sh                          # default: live-tails the extractor (logs/processor.log)
+./run.sh                          # default: full stack, live-tails the extractor (logs/processor.log)
+
+# --follow: choose which worker's log streams to this terminal
 ./run.sh --follow content_worker  # tail a different worker
 ./run.sh --follow frontend        # tail the Vite dev server
 ./run.sh --follow all             # interleave all four log files
-./run.sh --no-follow              # don't tail anything; just block
+./run.sh --no-follow              # don't tail anything; just block (useful under systemd)
+
+# --scrape-only: run only the ingest side (content worker + extraction
+# worker + RabbitMQ); skip the Go backend, the Vite frontend, and their
+# pre-flight checks. Fills Supabase from scraping without the serving layer.
+./run.sh --scrape-only            # ingest only; still tails the extractor by default
+./run.sh --scrape-only --follow content_worker   # ingest only, tail the scraper
+# Note: --follow backend / --follow frontend are rejected under --scrape-only
+# (those services never start), and --follow all tails just the two ingest logs.
+
+# --purge: wipe urls_queue + job_queue at startup for a clean slate.
+# Default keeps mid-flight messages so a code-change restart drops nothing.
+./run.sh --purge                  # clean-slate queues, then full stack
+./run.sh --scrape-only --purge    # flags compose freely
+
+# --generate-projects: one-shot recommendations catalog build, then exit.
+# Runs no services; needs SUPABASE_DB_DIRECT_URL + Ollama. See §11.3.
+./run.sh --generate-projects
+
 ./run.sh --help                   # full usage
 ```
 
@@ -348,8 +375,22 @@ it has hot reloading.
 ### 11.2 Ingest fresh data
 
 ```bash
-./harvest.sh
+./harvest.sh                              # harvest the default title (JOB_TITLE in harvest.sh)
+./harvest.sh "Machine Learning Engineer"  # override the title for this run
+./harvest.sh "Data Scientist, Backend Engineer"  # comma-separate for several titles in one run
 ```
+
+Which job title(s) get scraped is controlled two ways:
+
+- **Edit the default** — change the `JOB_TITLE="Data Scientist"` line near the
+  top of `harvest.sh`. This is what cron uses (see §11.4).
+- **Pass an argument** — a command-line argument overrides `JOB_TITLE` for
+  that run only.
+
+Type plain titles (e.g. `Machine Learning Engineer`) — `harvest.sh` exports
+them as `JOB_KEYWORDS` and the spider URL-encodes them for the LinkedIn query
+string, so you never write `%20` yourself. Comma-separated titles each become
+their own search, crossed with the four experience levels.
 
 The link spider walks LinkedIn search result pages and `basic_publish`es
 each posting URL to `urls_queue` as it discovers it. The content_worker
@@ -371,22 +412,118 @@ SELECT COUNT(*), AVG(array_length(skills, 1))::int AS avg_skills
 FROM job_postings;
 ```
 
-### 11.3 Use the app
+### 11.3 Build the project recommendations catalog
 
-Open http://localhost:8080 and search for a job title. You should see a bar
-chart of top skills plus a row of related-title chips. Empty chips usually
-mean too few rows or facet filters that are too tight — raise `matchLimit`
-in `backend/services/skills_service.go` or relax the facet rules.
+Once you have a meaningful number of postings ingested, generate the
+portfolio-project recommendations the app shows. This is an **offline, local
+batch job** (`data_pipeline/recommendations/build_catalog.py`): it mines
+frequent skill *triples* from `job_postings`, asks local Gemma to invent one
+project per triple, and upserts the results into `project_recommendations`.
+The Go backend then serves them at request time with a model-free
+`skills <@ $top5` lookup — no cloud LLM on the request path.
 
-### 11.4 Scheduling ingest
+Prerequisites:
+- **Postings already ingested** (§11.2). Triples only form from postings with
+  ≥3 skills, and the corpus must be large enough for triples to clear
+  `--min-support`.
+- **Ollama running** with the same Gemma tag as ingest (`LLM_MODEL`).
+- **A port-5432 DSN in `SUPABASE_DB_DIRECT_URL`.** This batch job reads
+  `SUPABASE_DB_DIRECT_URL`, not the pooled `SUPABASE_DB_URL`. Use the
+  Supavisor **pooler** host (same host/user as `SUPABASE_DB_URL`) with port
+  **5432** for a dedicated session-mode connection. Do **not** use the true
+  direct host (`db.<ref>.supabase.co`) — it's IPv6-only on the free tier and
+  unreachable from most networks (see Troubleshooting §14).
 
-The harvest script is the only cron-driven piece. In production the
+The quickest way, once `SUPABASE_DB_DIRECT_URL` is set in `.env`, is the
+`run.sh` convenience flag. It runs a slim pre-flight (`.env`,
+`SUPABASE_DB_DIRECT_URL`, `LLM_MODEL`, `.venv`, Ollama), runs the build with
+default parameters, and exits — it does **not** bring up RabbitMQ, the
+workers, the backend, or the frontend:
+
+```bash
+./run.sh --generate-projects
+```
+
+To tune the mining parameters, invoke the module directly:
+
+```bash
+source .venv/bin/activate
+
+# The direct 5432 string (note the port vs. the pooled 6543 one).
+# (run.sh sources this from .env; export it only for a manual run.)
+export SUPABASE_DB_DIRECT_URL="postgresql://postgres.<ref>:<pwd>@aws-0-<region>.pooler.supabase.com:5432/postgres"
+
+# Defaults: --min-support 25 --min-lift 1.0 --top-n 200 --max-skills 30
+python -m data_pipeline.recommendations.build_catalog
+
+# Smaller / newer corpus? Lower the support floor so triples survive:
+python -m data_pipeline.recommendations.build_catalog \
+  --min-support 10 --min-lift 1.0 --top-n 100
+```
+
+Flags:
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--min-support` | `25` | Min postings a triple must appear in. Lower it on a small corpus, raise it to keep only well-established combos. |
+| `--min-lift` | `1.0` | Drop triples whose lift is below this (`1.0` = no better than chance), filtering out "three popular skills that merely collide". |
+| `--top-n` | `200` | Cap on how many triples get a generated project (one Gemma call each). |
+| `--max-skills` | `30` | Per-posting skill cap bounding the `O(k³)` triple-mining join. |
+
+The job prints per-triple progress
+(`[i/N] (skills) (n=…, lift=…) -> Project title`) and a final
+`Upserted X/N projects`. It's **idempotent**: each triple maps to a stable
+`uuid5` `project_id`, so `ON CONFLICT` updates rows in place instead of
+duplicating. Re-run it whenever the posting corpus has grown enough to shift
+the popular skill combinations.
+
+Verify in the Supabase SQL editor:
+```sql
+SELECT title, level, skills, support_count, lift
+FROM project_recommendations
+ORDER BY score DESC LIMIT 10;
+```
+
+### 11.4 Use the app
+
+In dev, open **http://localhost:5173** (the Vite dev server) — it serves the
+SPA from live source with hot reload, so frontend edits show up immediately.
+`http://localhost:8080` also serves the app, but from the pre-built
+`frontend/dist/`, which is only as fresh as your last `npm run build` — use it
+to sanity-check a production build, not for active development.
+
+Search for a job title. You should see a bar chart of top skills plus a row of
+related-title chips. Empty chips usually mean too few rows or facet filters
+that are too tight — raise `matchLimit` in
+`backend/services/skills_service.go` or relax the facet rules.
+
+### 11.5 Scheduling ingest
+
+The harvest script is the main cron-driven piece. In production the
 long-running services should sit under `systemd` or `supervisor` instead
 of `./run.sh`.
 
+A bare `harvest.sh` in cron uses the `JOB_TITLE` default baked into the
+script; pass an argument to schedule a specific title (or add more cron
+lines, one per title).
+
 ```cron
 # Daily link harvest at 02:00 local; URLs flow urls_queue -> job_queue.
+# Uses the JOB_TITLE default in harvest.sh.
 0 2 * * * /path/to/TechTrendTracker/harvest.sh >> /var/log/ttt/harvest.log 2>&1
+
+# Or pin a title per schedule line:
+0 3 * * * /path/to/TechTrendTracker/harvest.sh "Machine Learning Engineer" >> /var/log/ttt/harvest.log 2>&1
+```
+
+The recommendations catalog (§11.3) doesn't need to run as often — popular
+skill combinations shift slowly. Rebuild it on a looser cadence, after the
+corpus has had time to grow. `SUPABASE_DB_DIRECT_URL` must be set in the cron
+environment:
+
+```cron
+# Weekly catalog rebuild, Sunday 04:00, after the nightly harvests.
+0 4 * * 0 cd /path/to/TechTrendTracker && SUPABASE_DB_DIRECT_URL="postgresql://...:5432/postgres" .venv/bin/python -m data_pipeline.recommendations.build_catalog >> /var/log/ttt/recommendations.log 2>&1
 ```
 
 ---
@@ -526,6 +663,7 @@ gcloud beta run domain-mappings create \
 | Cloud Run cold-start times out | Model load > 60s on tiny CPU | Bump `--cpu=2 --memory=2Gi`, set `--min-instances=1` |
 | Python `tokenizers.Tokenizer.from_file` fails | `tokenizer.json` missing from `ONNX_MODEL_DIR` | Re-run §5 second snippet |
 | Embedding parity test diverges | Different ONNX export between planes | Re-export and reuse the same files in both `optimum-cli export` and the Docker image |
+| `--generate-projects` fails with `Network is unreachable` on an IPv6 address, port 5432 | `SUPABASE_DB_DIRECT_URL` points at the true direct host (`db.<ref>.supabase.co`), which is **IPv6-only** on the free tier; most networks (WSL2 etc.) can't route it | Use the Supavisor **pooler** host in session mode instead: same host/user as `SUPABASE_DB_URL` but port **5432** (not 6543). It's IPv4. |
 
 ---
 

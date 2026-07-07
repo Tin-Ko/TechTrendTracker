@@ -1,0 +1,34 @@
+[
+  {
+    "_readme": "Prompt regression set (design §10.3): run these through the LIVE local model before changing prompt_version or the model tag. NOT CI — needs Ollama. TODO(you): (1) grow to ~20 cases, biased toward past misclassifications; (2) write the tiny runner: for each case call build_normalizer_prompt + call_title_llm + validate_decision and compare expected_family/expected_specs; print pass-rate; (3) track pass-rate per prompt_version in this _readme, e.g. 'title-norm-v1: 18/20'."
+  },
+  {
+    "title": "backend software engineer",
+    "expected_family": "software engineer",
+    "expected_specs": ["backend"]
+  },
+  {
+    "title": "back end developer",
+    "expected_family": "software engineer",
+    "expected_specs": ["backend"],
+    "_note": "equivalence with the case above — must also land canonical 'backend engineer' after the head-noun rewrite"
+  },
+  {
+    "title": "member of technical staff",
+    "expected_family": "software engineer",
+    "expected_specs": [],
+    "_note": "zero lexical overlap with its family — the case embeddings/trigrams can NEVER get right; if this fails the LLM isn't earning its keep"
+  },
+  {
+    "title": "ml infrastructure engineer",
+    "expected_family": "machine learning engineer",
+    "expected_specs": ["infrastructure", "ml"],
+    "_note": "two-families-plausible case (§12): policy says the more specific family wins"
+  },
+  {
+    "title": "enterprise account executive",
+    "expected_family": null,
+    "expected_specs": [],
+    "_note": "deliberate abstention — non-tech title that slipped through the scraper"
+  }
+]
