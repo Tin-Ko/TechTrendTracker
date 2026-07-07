@@ -119,7 +119,12 @@ def load_family_registry(conn) -> list[str]:
     #    - An empty list on a fresh DB is fine — the prompt template must
     #      tolerate it (the LLM will just propose families, which is intended
     #      bootstrap behavior). Don't raise on empty.
-    raise NotImplementedError
+    with conn.cursor() as cur:
+        cur.execute("SELECT family FROM role_families ORDER BY posting_count DESC;")
+        return [row[0] for row in cur.fetchall()]
+        
+
+
 
 
 def load_spec_vocab(conn) -> list[str]:
@@ -140,7 +145,9 @@ def load_spec_vocab(conn) -> list[str]:
     #    - Same shape as load_family_registry: cursor, execute, list of col 0.
     #    - Keep the two loaders as separate functions even though they look
     #      similar — they diverge later (e.g. if you add per-family specs).
-    raise NotImplementedError
+    with conn.cursor() as cur:
+        cur.execute("SELECT spec FROM spec_vocabulary WHERE status = 'activ' ORDER by spec;")
+        return [row[0] for row in cur.fetchall()]
 
 
 def lookup_title_map(conn, key: str) -> Optional[TitleDecision]:
