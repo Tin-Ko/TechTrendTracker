@@ -13,7 +13,8 @@ class TestRequirementsParser(unittest.TestCase):
             "python": "Python",
             "javascript": "JavaScript",
             "c++": "C++",
-            "c#": "C#"
+            "c#": "C#",
+            "docker": "Docker",
         }
 
         self.requirements_parser = RequirementsParser(canonical_skill_map=self.canonical_skill_map, tech_capitalization_map=self.tech_capitalization_map)

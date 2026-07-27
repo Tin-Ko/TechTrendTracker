@@ -23,18 +23,27 @@ class RequirementsParser:
             parts = skill_normalized.split("/")
             return [self.normalize_skill(part) for part in parts]
 
+        # Strip punctuation (keeping + and # so C++/C# survive) BEFORE the map
+        # lookups, so trailing junk like "python!!" still matches the key
+        # "python". Must stay AFTER the "/"-split above — this regex would
+        # otherwise eat the "/" and merge the parts into one skill.
+        skill_normalized = re.sub(r"[^\w\s\+\#]", "", skill_normalized)
+
         if skill_normalized in self.canonical_skill_map.keys():
             skill_normalized = self.canonical_skill_map[skill_normalized]
 
         if skill_normalized in self.tech_capitalization_map.keys():
             skill_normalized = self.tech_capitalization_map[skill_normalized]
 
-        skill_normalized = re.sub(r"[^\w\s\+\#]", "", skill_normalized)
-
         return skill_normalized
     
     def clean_extracted_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        raw_skills = data.get("skills", [])     # data.get() because it can still return something when the key doesn't exist
+        # Preserve absence: if the input never had a skills key, don't fabricate
+        # one. (build_posting treats a missing key the same as empty anyway.)
+        if "skills" not in data:
+            return {**data}
+
+        raw_skills = data["skills"]
 
         if not isinstance(raw_skills, list):
             raw_skills = [raw_skills]
