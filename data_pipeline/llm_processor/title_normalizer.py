@@ -2,7 +2,6 @@ from __future__ import annotations
 import functools, json, logging, os, time, unicodedata
 from dataclasses import dataclass
 from typing import Optional
-import ollama
 from data_pipeline.llm_processor import facet_parser
 import re
 

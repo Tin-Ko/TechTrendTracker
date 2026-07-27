@@ -1,0 +1,37 @@
+# Tooling config only — this is deliberately NOT a [project]/packaging table,
+# so nothing here implies TechTrendTracker is a pip-installable package. It just
+# configures pytest and ruff in one place.
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+# Repo root on sys.path so `from data_pipeline...` / `from constants...` resolve
+# the same way they do when you run `python -m unittest` from the root today.
+# (Cleaner than dropping an empty conftest.py at the root just for this.)
+pythonpath = ["."]
+
+# The seam that lets a model-less machine run the suite. Anything that touches
+# Ollama, ONNX, RabbitMQ, or a live DB is marked `integration` and skipped by
+# default via addopts below. Run the full set on the model machine with:
+#     pytest -m integration        (only those)
+#     pytest -m ""                 (everything, overrides the default filter)
+markers = [
+    "integration: needs Ollama/ONNX/RabbitMQ/DB; skipped by default",
+]
+
+# Default run = unit only. A trailing `-m` on the command line overrides this
+# (pytest takes the last -m), so the two example commands above still work.
+addopts = "-m 'not integration'"
+
+
+[tool.ruff]
+target-version = "py310"   # matches the PEP 604 `X | Y` unions already in the code
+line-length = 100
+
+[tool.ruff.lint]
+# Start lenient on purpose — this should not trigger a repo-wide reformat on a
+# codebase that wasn't linted before. Widen the ruleset once it's green.
+#   E,W = pycodestyle   F = pyflakes (real bugs: unused imports, undefined names)
+#   I   = import sorting
+select = ["E", "W", "F", "I"]
+ignore = ["E501"]   # line length is a warning-class nit; enforce logic first

@@ -259,7 +259,7 @@ launch() {
 launch processor      "$PYBIN" -m data_pipeline.llm_processor.processor
 launch content_worker "$PYBIN" -m data_pipeline.scraper.content_worker
 if [[ $SCRAPE_ONLY -eq 0 ]]; then
-    launch backend        bash -c "cd backend && go build -o ./.bin/server . && exec ./.bin/server"
+    launch backend        bash -c "cd backend && go build -tags onnx -o ./.bin/server . && exec ./.bin/server"
     launch frontend       bash -c "cd frontend && npm run dev -- --host 0.0.0.0"
 fi
 

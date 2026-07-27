@@ -3,9 +3,6 @@ import os
 from typing import Dict
 
 import ollama
-import openai
-
-from data_pipeline.llm_processor.config import LLM_API_KEY
 
 
 class Extractor:
@@ -33,6 +30,13 @@ class Extractor:
         return json.loads(extracted_data)
 
     def extract_skills_from_job_cloudLLM(self, description: str) -> Dict:
+        # Unused DeepSeek fallback (design §11). Imports are local so the module
+        # loads without `openai` or the gitignored `config.py` present — the live
+        # ingest path only uses extract_skills_from_job (Ollama) above.
+        import openai
+
+        from data_pipeline.llm_processor.config import LLM_API_KEY
+
         client = openai.OpenAI(
             api_key=LLM_API_KEY,
             base_url="https://api.deepseek.com"
