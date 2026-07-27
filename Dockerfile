@@ -79,7 +79,9 @@ RUN go mod download
 COPY backend/ ./
 
 ENV CGO_ENABLED=1
-RUN go build -trimpath -ldflags="-s -w" -o /out/server .
+# -tags onnx selects the real hugot/ONNX embedder (embed_service_onnx.go). The
+# default build compiles the no-op stub, so this tag is REQUIRED in production.
+RUN go build -tags onnx -trimpath -ldflags="-s -w" -o /out/server .
 
 # ============================================================================
 # Stage 4: slim runtime

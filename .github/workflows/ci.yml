@@ -1,0 +1,79 @@
+name: CI
+
+# Pull-request gate: model-free, infra-free checks only. Anything needing
+# Ollama/ONNX/RabbitMQ/a live DB is marked `integration` (Python) or `-tags onnx`
+# (Go) and runs on the model machine, not here. See implementation-plan.md.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: Python — lint + unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      # Only dev tooling — NOT requirements.txt. The unit suite imports no
+      # runtime libs (pipeline.py uses Protocols; the model-touching tests
+      # skip via pytest.importorskip). Keeps this job fast.
+      - run: pip install -r requirements-dev.txt
+      - name: Lint (non-blocking until the 56-finding backlog is triaged)
+        run: ruff check .
+        continue-on-error: true
+      - name: Unit tests (model-free)
+        # Also runs the Python half of the title-norm parity lock
+        # (tests/llm_processor/test_title_normalizer.py).
+        run: pytest -m "not integration"
+
+  go:
+    name: Go — vet + build + test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      # Default build = the no-ONNX stub (embed_service_stub.go), so no ONNX
+      # Runtime / libtokenizers needed. The real impl is only *type-checked*
+      # under -tags onnx (vet compiles but doesn't link) to catch drift without
+      # the native libs — the actual linked -tags onnx build happens in Docker.
+      - run: go vet ./...
+      - run: go vet -tags onnx ./...
+      - run: go build ./...
+      - name: Test
+        # Runs the Go half of the title-norm parity lock
+        # (services/title_service_test.go).
+        run: go test ./...
+
+  frontend:
+    name: Frontend — typecheck + build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      # frontend/package-lock.json is gitignored, so `npm ci` (needs a committed
+      # lockfile) can't run. Using `npm install` until the lockfile is committed
+      # — see implementation-plan.md Phase 2 finding. Commit it + switch to
+      # `npm ci` for reproducible builds (and it also fixes git-based Docker builds).
+      - run: npm install --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm run build

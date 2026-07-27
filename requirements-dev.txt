@@ -1,0 +1,10 @@
+# Dev/test tooling — NOT needed at runtime or in the Cloud Run image.
+# Install into your 3.10+ venv:  pip install -r requirements-dev.txt
+#
+# Runtime deps stay in requirements.txt. Keeping them split means CI's
+# unit-test job installs only this file (fast, no onnxruntime/scrapy/etc.).
+
+pytest>=8.0          # runner; collects the existing unittest.TestCase tests as-is
+pytest-cov>=5.0      # coverage (--cov), for the CI gate in Phase 5
+pytest-mock>=3.12    # the `mocker` fixture — fake Ollama/ONNX/db at the seam
+ruff>=0.6            # lint + import-order; fast, single binary
