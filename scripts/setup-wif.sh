@@ -44,6 +44,20 @@ for ROLE in roles/run.admin roles/cloudbuild.builds.editor \
     --member="serviceAccount:${SA_EMAIL}" --role="$ROLE" --condition=None >/dev/null
 done
 
+echo "== granting deployer read access to the Cloud Run secret =="
+# deploy.sh pre-flight runs `gcloud secrets describe` (needs secretmanager.viewer)
+# and `gcloud run deploy --set-secrets` references it (secretAccessor). Scoped to
+# the one secret, not project-wide. Skipped if the secret doesn't exist yet.
+SECRET="${SECRET:-supabase-db-url}"
+if gcloud secrets describe "$SECRET" >/dev/null 2>&1; then
+  for ROLE in roles/secretmanager.viewer roles/secretmanager.secretAccessor; do
+    gcloud secrets add-iam-policy-binding "$SECRET" \
+      --member="serviceAccount:${SA_EMAIL}" --role="$ROLE" >/dev/null
+  done
+else
+  echo "  (skipped: secret '$SECRET' not found — create it, then re-run this script)"
+fi
+
 echo "== workload identity pool =="
 if ! gcloud iam workload-identity-pools describe "$POOL_ID" --location=global >/dev/null 2>&1; then
   gcloud iam workload-identity-pools create "$POOL_ID" \
