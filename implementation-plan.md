@@ -22,7 +22,7 @@ job is only worth having if there's something model-free to run in it.
 | 0 | Test foundation (pytest + Go conventions) | `[~]` toolchains installed, pytest+ruff+go vet verified; testify + stub split deferred to Phase 2 |
 | 1 | Refactor `processor.py` for testability (Option C) | `[x]` done — seam extracted, model-free unit tests green |
 | 2 | CI — pull-request checks (no models, no infra) | `[~]` stub split done, `ci.yml` authored+validated; needs a real PR run |
-| 3 | CD — build & deploy to Cloud Run | `[ ]` not started |
+| 3 | CD — build & deploy to Cloud Run | `[~]` deploy.yml + WIF authored; verifies on first push to main |
 | 4 | Integration & golden-query gates (model machine) | `[ ]` not started |
 | 5 | Hardening & nice-to-haves | `[ ]` not started |
 
@@ -226,22 +226,30 @@ This also removes a latent reproducibility hole in the image build.
 *Goal: automate the existing `deploy.sh`. Serving plane only — the ingest plane
 runs on your local cron and is never shipped.*
 
-Status: `[ ]` not started
+Status: `[~]` authored & YAML-valid. **Decisions locked: D1 = auto-deploy on push
+to `main`; D3 = Workload Identity Federation (keyless).** Unverifiable until a real
+push to `main` — first deploy happens when this branch merges.
 
-- [ ] `.github/workflows/deploy.yml`, trigger per **D1** (default: push of a
-      `v*` tag).
-- [ ] GCP auth per **D3** (default: `google-github-actions/auth` with Workload
-      Identity Federation — no long-lived key in secrets).
-  - [ ] One-time GCP setup: WIF pool + provider, service account with
-        `run.admin` + `artifactregistry.writer` + `iam.serviceAccountUser`.
-- [ ] Build the 4-stage `Dockerfile` and push to Artifact Registry
-      (`us-west2-docker.pkg.dev/...`).
-- [ ] `gcloud run deploy` via `deploy.sh` (already non-interactive, `--quiet`,
-      env-overridable, non-zero exit on failure).
-- [ ] Rely on `deploy.sh`'s built-in smoke test (`/` and `/skills` reported
-      separately) as the deploy gate; fail the job on smoke failure.
-- [ ] Confirm the DB URL still comes from Secret Manager at deploy time (never
-      baked into the image).
+- [x] `.github/workflows/deploy.yml` — trigger `push: branches: [main]` (D1),
+      `permissions: id-token: write` for WIF, `concurrency: deploy-main` so two
+      deploys never overlap.
+- [x] GCP auth via WIF (D3): `google-github-actions/auth@v2` reading repo
+      *variables* `GCP_WIF_PROVIDER` / `GCP_DEPLOY_SA` — no key stored.
+- [x] One-time GCP setup scripted in `scripts/setup-wif.sh` (idempotent): pool +
+      provider pinned to `Tin-Ko/TechTrendTracker`, `github-deployer` SA with
+      `run.admin` + `cloudbuild.builds.editor` + `artifactregistry.writer` +
+      `iam.serviceAccountUser`, impersonation binding. **User has run it and set
+      the two repo variables.**
+- [x] Build + deploy handled by calling `./deploy.sh` (Cloud Build of the 4-stage
+      image → `gcloud run deploy` → smoke test). Heavy cgo/ONNX build runs in
+      Cloud Build, not the runner. `deploy.sh` is `100755` so `./deploy.sh` runs.
+- [x] Smoke test is deploy.sh's built-in `GET /` gate (non-2xx fails the job).
+- [x] DB URL stays in Secret Manager (`--set-secrets` in deploy.sh); never baked.
+- [ ] **Verify on first real push to `main`.** Watch for: (a) the WIF token
+      exchange succeeding, (b) a possible one-time Cloud Build SA permission error.
+- [ ] Hardening (optional): scope `iam.serviceAccountUser` to just the Cloud Run
+      runtime SA instead of project-wide; consider `paths-ignore` for docs-only
+      pushes so a README change doesn't trigger a full build+deploy.
 
 ## Phase 4 — Integration & golden-query gates (model machine)
 
