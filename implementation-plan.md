@@ -246,8 +246,13 @@ push to `main` — first deploy happens when this branch merges.
       Cloud Build, not the runner. `deploy.sh` is `100755` so `./deploy.sh` runs.
 - [x] Smoke test is deploy.sh's built-in `GET /` gate (non-2xx fails the job).
 - [x] DB URL stays in Secret Manager (`--set-secrets` in deploy.sh); never baked.
-- [ ] **Verify on first real push to `main`.** Watch for: (a) the WIF token
-      exchange succeeding, (b) a possible one-time Cloud Build SA permission error.
+- [x] **Build/deploy mechanics verified via canary** (`SERVICE=ttt-backend-canary
+      ./deploy.sh --no-smoke` in Cloud Shell): all 4 Docker stages built in Cloud
+      Build (incl. the `-tags onnx` cgo build + the frontend `npm install` fix),
+      deployed to a throwaway service, then deleted. Live `ttt-backend` untouched.
+- [ ] **WIF/GitHub path verified on first push to `main`** (the merge). Watch:
+      (a) the WIF token exchange in the `auth` step, (b) a possible one-time Cloud
+      Build SA permission error.
 - [ ] Hardening (optional): scope `iam.serviceAccountUser` to just the Cloud Run
       runtime SA instead of project-wide; consider `paths-ignore` for docs-only
       pushes so a README change doesn't trigger a full build+deploy.
