@@ -46,8 +46,12 @@ RUN mkdir -p ${MODEL_DIR} \
 FROM node:20-bookworm-slim AS frontend
 
 WORKDIR /src
-COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci
+# frontend/package-lock.json is gitignored and not present in git-based build
+# contexts (Cloud Build / CI), so `npm ci` can't run. Copy only package.json and
+# `npm install`. Commit a lockfile + switch back to `npm ci` for reproducible
+# builds — see implementation-plan.md Phase 2/5.
+COPY frontend/package.json ./
+RUN npm install --no-audit --no-fund
 COPY frontend/ ./
 RUN npm run build
 # Output lands at /src/dist (from vite.config.ts build.outDir).

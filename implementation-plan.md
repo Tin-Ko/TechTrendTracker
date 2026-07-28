@@ -215,11 +215,12 @@ Go `NormalizeTitleKey` is still `t.Skip`-stubbed (§8). Revisit when §8 lands.
 - [ ] **Facet-rule parity** (`facet_parser.py` vs `facet_service.go`): no shared
       fixture exists yet — add one, then assert both planes agree. Still open.
 
-**New Phase 2 finding — frontend lockfile.** `frontend/package-lock.json` is
-gitignored. `npm ci` needs a committed lockfile, so CI (and any git-based Docker/
-Cloud Build) can't use it — the workflow uses `npm install` as a stopgap. **Fix:**
-un-ignore + commit the lockfile, switch the job (and Dockerfile) to `npm ci`.
-This also removes a latent reproducibility hole in the image build.
+**Phase 2 finding — frontend lockfile (partially fixed).** `frontend/package-lock.json`
+is gitignored and doesn't exist, so `npm ci` can't run in any git-based build. It
+broke the Cloud Build image build (`COPY ... package-lock.json` → file not found).
+**Applied:** both `ci.yml` and the **Dockerfile** now `COPY package.json` + `npm
+install` (no lockfile needed). **Still open (Phase 5 reproducibility fix):** generate
++ commit a lockfile (un-ignore it) and switch both back to `npm ci`.
 
 ## Phase 3 — CD: build & deploy to Cloud Run
 
