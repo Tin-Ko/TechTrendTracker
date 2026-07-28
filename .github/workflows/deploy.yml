@@ -1,0 +1,44 @@
+name: Deploy
+
+# Continuous deployment (D1): every push to main builds the image via Cloud Build
+# and deploys it to Cloud Run. The deploy is gated by deploy.sh's built-in smoke
+# test — a non-2xx on GET / fails the job. CI (ci.yml) still runs on the PR before
+# the merge that triggers this.
+on:
+  push:
+    branches: [main]
+
+# id-token: write lets the job mint the GitHub OIDC token that WIF exchanges for
+# short-lived GCP credentials (no stored key). contents: read is for checkout.
+permissions:
+  contents: read
+  id-token: write
+
+# Never run two deploys at once; let an in-flight deploy finish rather than
+# cancelling it mid-rollout.
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build + deploy to Cloud Run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud (keyless, WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          # Non-secret values set as repo Variables by scripts/setup-wif.sh.
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      # deploy.sh does the whole thing: pre-flight (auth/secret/AR repo checks),
+      # Cloud Build of the 4-stage image, `gcloud run deploy`, and the smoke test.
+      # The heavy cgo/ONNX build runs in Cloud Build, not on this runner.
+      - name: Build + deploy + smoke test
+        run: ./deploy.sh
