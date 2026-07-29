@@ -39,10 +39,14 @@ echo "== granting deploy roles to $SA_EMAIL =="
 # Cloud Run runtime SA during deploy (project-scoped here for simplicity; see the
 # hardening note in the plan to scope it to just the runtime SA).
 for ROLE in roles/run.admin roles/cloudbuild.builds.editor \
-            roles/artifactregistry.writer roles/iam.serviceAccountUser; do
+            roles/artifactregistry.writer roles/iam.serviceAccountUser \
+            roles/serviceusage.serviceUsageConsumer; do
   gcloud projects add-iam-policy-binding "$PROJECT_ID" \
     --member="serviceAccount:${SA_EMAIL}" --role="$ROLE" --condition=None >/dev/null
 done
+# serviceUsageConsumer: `gcloud builds submit` needs serviceusage.services.use to
+# resolve the quota project; without it you get a misleading "forbidden from
+# accessing the bucket [PROJECT_cloudbuild]" error.
 
 echo "== granting deployer read access to the Cloud Run secret =="
 # deploy.sh pre-flight runs `gcloud secrets describe` (needs secretmanager.viewer)
@@ -56,6 +60,18 @@ if gcloud secrets describe "$SECRET" >/dev/null 2>&1; then
   done
 else
   echo "  (skipped: secret '$SECRET' not found — create it, then re-run this script)"
+fi
+
+echo "== granting deployer access to the Cloud Build staging bucket =="
+# `gcloud builds submit` uploads source to gs://PROJECT_cloudbuild; the deployer
+# SA must be able to write there. cloudbuild.builds.editor does NOT cover this.
+# The bucket is auto-created on the first Cloud Build, so guard on its existence.
+CB_BUCKET="gs://${PROJECT_ID}_cloudbuild"
+if gcloud storage buckets describe "$CB_BUCKET" >/dev/null 2>&1; then
+  gcloud storage buckets add-iam-policy-binding "$CB_BUCKET" \
+    --member="serviceAccount:${SA_EMAIL}" --role="roles/storage.admin" >/dev/null
+else
+  echo "  (skipped: $CB_BUCKET not created yet — run one build, then re-run this script)"
 fi
 
 echo "== workload identity pool =="

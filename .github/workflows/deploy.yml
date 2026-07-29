@@ -37,8 +37,12 @@ jobs:
       - name: Set up gcloud
         uses: google-github-actions/setup-gcloud@v2
 
-      # deploy.sh does the whole thing: pre-flight (auth/secret/AR repo checks),
-      # Cloud Build of the 4-stage image, `gcloud run deploy`, and the smoke test.
-      # The heavy cgo/ONNX build runs in Cloud Build, not on this runner.
+      # deploy.sh does pre-flight, build, `gcloud run deploy`, and the smoke test.
+      # --local builds the 4-stage image with Docker ON THIS RUNNER (runners have
+      # Docker; the Dockerfile installs ONNX Runtime + libtokenizers itself) and
+      # pushes to Artifact Registry. We avoid `gcloud builds submit` (Cloud Build)
+      # because staging source to gs://PROJECT_cloudbuild under WIF credentials
+      # fails the serviceusage.services.use / bucket check regardless of IAM.
+      # --local needs only artifactregistry.writer, which the SA already has.
       - name: Build + deploy + smoke test
-        run: ./deploy.sh
+        run: ./deploy.sh --local
