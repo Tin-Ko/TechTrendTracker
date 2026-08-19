@@ -1,0 +1,29 @@
+{
+  "outputStyle": "Design tutor",
+  "permissions": {
+    "deny": [
+      "Edit(**/*.py)",
+      "Edit(**/*.js)",
+      "Edit(**/*.jsx)",
+      "Edit(**/*.ts)",
+      "Edit(**/*.tsx)",
+      "Edit(**/*.go)",
+      "Edit(**/*.rs)",
+      "Edit(**/*.java)",
+      "Edit(**/*.kt)",
+      "Edit(**/*.rb)",
+      "Edit(**/*.c)",
+      "Edit(**/*.h)",
+      "Edit(**/*.cc)",
+      "Edit(**/*.cpp)",
+      "Edit(**/*.hpp)",
+      "Edit(**/*.cs)",
+      "Edit(**/*.swift)",
+      "Edit(**/*.php)",
+      "Edit(**/*.sql)",
+      "Edit(**/*.sh)",
+      "Edit(**/*.proto)",
+      "Edit(**/*.ipynb)"
+    ]
+  }
+}

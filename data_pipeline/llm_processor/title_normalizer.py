@@ -146,7 +146,7 @@ def load_spec_vocab(conn) -> list[str]:
     #    - Keep the two loaders as separate functions even though they look
     #      similar — they diverge later (e.g. if you add per-family specs).
     with conn.cursor() as cur:
-        cur.execute("SELECT spec FROM spec_vocabulary WHERE status = 'activ' ORDER by spec;")
+        cur.execute("SELECT spec FROM spec_vocabulary WHERE status = 'active' ORDER by spec;")
         return [row[0] for row in cur.fetchall()]
 
 
@@ -169,7 +169,16 @@ def lookup_title_map(conn, key: str) -> Optional[TitleDecision]:
     #      schema change can't silently shift what from_db receives.
     #    - psycopg returns Postgres TEXT[] as a Python list; from_db already
     #      converts it to a tuple, so no extra handling needed here.
-    raise NotImplementedError
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT canonical_title, role_family, specializations "
+            "FROM title_map WHERE raw_title_norm = %s;",
+            (key,),
+        )
+        row = cur.fetchone()
+        if row is None:
+            return None
+        return TitleDecision.from_db(row)
 
 
 def register_new_family(conn, family: str) -> None:
@@ -187,7 +196,12 @@ def register_new_family(conn, family: str) -> None:
     #    - ON CONFLICT DO NOTHING makes this safe to call concurrently and
     #      repeatedly — two workers proposing the same family is not an error.
     #    - posting_count stays at its DEFAULT 0; only reconcile maintains it.
-    raise NotImplementedError
+    with conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO role_families (family) VALUES (%s) "
+            "ON CONFLICT DO NOTHING;",
+            (family,),
+        )
 
 
 def register_new_spec(conn, spec: str, status: str = "pending") -> None:
@@ -205,7 +219,8 @@ def register_new_spec(conn, spec: str, status: str = "pending") -> None:
     #    - ON CONFLICT DO NOTHING also means: if the spec already exists as
     #      'rejected', this call will NOT resurrect it. That is the behavior
     #      we want — rejection is a human decision and sticks.
-    raise NotImplementedError
+    with conn.cursor() as cur:
+        cur.execute("INSERT INTO spec_vocabulary (spec, status) VALUES (%s, %s) ON CONFLICT DO NOTHING;", (spec, status),)
 
 
 def upsert_title_map(
@@ -238,13 +253,22 @@ def upsert_title_map(
     #    - `source` is one of: ingest_llm | backfill | query_llm | manual |
     #      merge (schema comment). The callers pass it in; don't default it.
     #    - decided_at has a DEFAULT now() — leave it out of the column list.
-    raise NotImplementedError
+    canonical_title, role_family, specs = decision.to_db()
+    with conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO title_map (raw_title_norm, canonical_title, role_family, specializations, source, model_version, prompt_version) VALUES (%s, %s, %s, %s, %s, %s, %s) On CONFLICT (raw_title_norm) DO NOTHING;",
+            (key, canonical_title, role_family, specs, source, model_version, prompt_version),
+        )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # LLM path (design §6.2 / §6.3)
 # ─────────────────────────────────────────────────────────────────────────────
 
+@functools.lru_cache()
+def _load_prompt_template() -> str:
+    with open(PROMPT_PATH, "r") as f:
+        return f.read()
 
 def build_normalizer_prompt(
     key: str, families: list[str], specs: list[str]
@@ -277,7 +301,13 @@ def build_normalizer_prompt(
     #      treat as placeholders. Plain .replace() of the two tokens is safer.
     #    - PROMPT_VERSION above identifies this template; if you edit the
     #      .txt file, bump the constant in the same commit.
-    raise NotImplementedError
+    template = _load_prompt_template()
+    families_str = ", ".join(families) if families else "(none yet - propose one)"
+    specs_str = ", ".join(specs) if specs else "(none yet - propose one)"
+    system_prompt = (
+        template.replace("{{KNOWN_FAMILIES}}", families_str).replace("{{ACTIVE_SPECS}}", specs_str)
+    )
+    return system_prompt, key
 
 
 def call_title_llm(model: str, system_prompt: str, user_msg: str) -> dict:
@@ -309,8 +339,38 @@ def call_title_llm(model: str, system_prompt: str, user_msg: str) -> dict:
     #      will want that when tuning the prompt.
     #    - Let ollama's own connection errors propagate as-is — the
     #      orchestrator catches broadly and treats them as transient.
-    raise NotImplementedError
+    response = ollama.chat(
+        model=model,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_msg}
+        ],
+        format="json",
+        options={"temperature": 0},
+    )
+    content = response["message"]["content"]
 
+    try:
+        return json.loads(content)
+    except json.JSONDecodeError:
+        log.warning("call_title_llm: unparseable output on first attempt: %r", content)
+        response = ollama.chat(
+            model=model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_msg},
+                {"role": "user", "content": "Return ONLY the JSON object."}
+            ],
+            format="json",
+            options={"temperature": 0},
+        )
+
+        content = response["message"]["content"]
+        try:
+            return json.loads(content)
+        except json.JSONDecodeError as e:
+            raise TitleLLMError(f"unparseable LLM output after retry: {content!r}") from e
+        
 
 def validate_decision(
     raw_out: dict, families: list[str], active_specs: list[str], conn
